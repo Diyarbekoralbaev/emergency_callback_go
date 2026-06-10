@@ -1,0 +1,36 @@
+{{ define "title" }}{{ if .IsEdit }}Редактировать{{ else }}Создать{{ end }} бригаду{{ end }}
+
+{{ define "content" }}
+<h1 class="h3 mb-4">{{ if .IsEdit }}Редактировать{{ else }}Создать{{ end }} бригаду</h1>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {{ .CSRFField }}
+            {{ if .FormErrors }}
+            <div class="alert alert-danger">{{ range .FormErrors }}<div>{{ . }}</div>{{ end }}</div>
+            {{ end }}
+            <div class="mb-3">
+                <label class="form-label">Название</label>
+                <input type="text" name="name" class="form-control" value="{{ .Team.Name }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Регион</label>
+                <select name="region" class="form-select" required>
+                    {{ range .Regions }}<option value="{{ .ID }}" {{ if eq $.Team.RegionID .ID }}selected{{ end }}>{{ .Name }}</option>{{ end }}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Описание</label>
+                <textarea name="description" class="form-control" rows="3">{{ .Team.Description }}</textarea>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="is_active" value="1" {{ if .Team.IsActive }}checked{{ end }}>
+                <label class="form-check-label">Активна</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <a href="{{ urlFor "teams:list" }}" class="btn btn-link">Отмена</a>
+        </form>
+    </div>
+</div>
+{{ end }}

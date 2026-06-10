@@ -1,0 +1,146 @@
+site_name: Emergency Callback — Documentation
+site_description: Automated ambulance-service callback & rating system (Go + FreePBX/Asterisk + PostgreSQL)
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: en
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.keys
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search:
+      lang:
+        - ru
+        - en
+  # Bilingual site. Russian is the default (served at the site root); English is
+  # available via the language switcher. Un-suffixed files (e.g. index.md) are
+  # Russian; English lives in <name>.en.md.
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: ru
+          name: Русский
+          default: true
+          build: true
+          site_name: Emergency Callback — Документация
+          nav_translations:
+            Home: Главная
+            Getting Started: Начало работы
+            Prerequisites: Требования
+            Installation: Установка
+            Configuration: Конфигурация
+            Telephony: Телефония
+            FreePBX Integration: Интеграция с FreePBX
+            Dialplan Reference: Справочник по диалплану
+            Audio Prompts: Аудиоподсказки
+            Call Flow: Поток вызова
+            Standalone Asterisk (test only): Автономный Asterisk (только тест)
+            Usage: Использование
+            Admin Guide: Руководство администратора
+            Operator Guide: Руководство оператора
+            Voting & SMS: Голосование и SMS
+            JSON API: JSON API
+            Operations: Эксплуатация
+            Running the Services: Запуск сервисов
+            Changing Things (Cookbook): Изменение настроек (рецепты)
+            Troubleshooting: Устранение неполадок
+            Backups & Scaling: Резервные копии и масштабирование
+            Reference: Справочник
+            Environment Variables: Переменные окружения
+            Database Schema: Схема базы данных
+            HTTP Routes: HTTP-маршруты
+            CLI Commands: Команды CLI
+            Call Status: Статусы вызова
+        - locale: en
+          name: English
+          build: true
+          site_name: Emergency Callback — Documentation
+  # PDF export (set ENABLE_PDF_EXPORT=1 to enable on build).
+  - with-pdf:
+      author: Emergency Callback
+      cover_title: Emergency Callback — Документация
+      cover_subtitle: Развёртывание, эксплуатация и интеграция телефонии
+      output_path: pdf/emergency-callback-docs.pdf
+      enabled_if_env: ENABLE_PDF_EXPORT
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Prerequisites: getting-started/prerequisites.md
+      - Installation: getting-started/installation.md
+      - Configuration: getting-started/configuration.md
+  - Telephony:
+      - FreePBX Integration: telephony/freepbx-integration.md
+      - Dialplan Reference: telephony/dialplan-reference.md
+      - Audio Prompts: telephony/audio-prompts.md
+      - Call Flow: telephony/call-flow.md
+      - Standalone Asterisk (test only): telephony/standalone-asterisk.md
+  - Usage:
+      - Admin Guide: usage/admin-guide.md
+      - Operator Guide: usage/operator-guide.md
+      - Voting & SMS: usage/voting-and-sms.md
+      - JSON API: usage/json-api.md
+  - Operations:
+      - Running the Services: operations/running-services.md
+      - Changing Things (Cookbook): operations/changing-things.md
+      - Troubleshooting: operations/troubleshooting.md
+      - Backups & Scaling: operations/backups-scaling.md
+  - Reference:
+      - Environment Variables: reference/environment-variables.md
+      - Database Schema: reference/database-schema.md
+      - HTTP Routes: reference/http-routes.md
+      - CLI Commands: reference/cli-commands.md
+      - Call Status: reference/call-status.md

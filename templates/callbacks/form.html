@@ -1,0 +1,53 @@
+{{ define "title" }}Новый вызов{{ end }}
+
+{{ define "content" }}
+<h1 class="h3 mb-4">Создать экстренный вызов</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {{ .CSRFField }}
+                    {{ if .FormErrors }}
+                    <div class="alert alert-danger">
+                        {{ range .FormErrors }}<div>{{ . }}</div>{{ end }}
+                    </div>
+                    {{ end }}
+                    <div class="mb-3">
+                        <label class="form-label">Регион</label>
+                        <select name="region" class="form-select" required>
+                            <option value="">— Выберите регион —</option>
+                            {{ range .Regions }}<option value="{{ .ID }}" {{ if eq $.SelectedRegion .ID }}selected{{ end }}>{{ .Name }}</option>{{ end }}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Бригада</label>
+                        <select name="team" class="form-select" required>
+                            <option value="">— Выберите бригаду —</option>
+                            {{ range .Teams }}<option value="{{ .ID }}" {{ if eq $.SelectedTeam .ID }}selected{{ end }}>{{ .Name }} ({{ .RegionName }})</option>{{ end }}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Номер телефона</label>
+                        <input type="text" name="phone_number" class="form-control" placeholder="+998901234567" value="{{ .PhoneNumber }}" required>
+                        <div class="form-text">Введите номер в международном формате</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-telephone-outbound"></i> Создать вызов</button>
+                    <a href="{{ urlFor "callbacks:list" }}" class="btn btn-link">Отмена</a>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3">
+            <h6>Сегодня</h6>
+            <div>Всего: <strong>{{ .TodayCalls }}</strong></div>
+            <div class="text-success">Успешных: {{ .TodayCompleted }}</div>
+            <div class="text-danger">Неудачных: {{ .TodayFailed }}</div>
+            <div>Оценок: {{ .TodayRatings }}</div>
+            <div>Успешность: {{ .TodaySuccessRate }}%</div>
+        </div>
+    </div>
+</div>
+{{ end }}

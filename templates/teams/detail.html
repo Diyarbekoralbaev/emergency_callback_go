@@ -1,0 +1,21 @@
+{{ define "title" }}{{ .Team.Name }}{{ end }}
+
+{{ define "content" }}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Бригада: {{ .Team.Name }}</h1>
+    <div>
+        <a class="btn btn-warning" href="{{ urlFor "teams:edit" .Team.ID }}"><i class="bi bi-pencil"></i> Редактировать</a>
+        <a class="btn btn-outline-danger" href="{{ urlFor "teams:delete" .Team.ID }}"><i class="bi bi-trash"></i> Удалить</a>
+    </div>
+</div>
+
+<div class="card p-3">
+    <table class="table table-sm mb-0">
+        <tr><th>Название</th><td>{{ .Team.Name }}</td></tr>
+        <tr><th>Регион</th><td>{{ .Team.RegionName }}</td></tr>
+        <tr><th>Описание</th><td>{{ .Team.Description }}</td></tr>
+        <tr><th>Активна</th><td>{{ if .Team.IsActive }}Да{{ else }}Нет{{ end }}</td></tr>
+        <tr><th>Создана</th><td>{{ tashkentDateTime .Team.CreatedAt }}</td></tr>
+    </table>
+</div>
+{{ end }}

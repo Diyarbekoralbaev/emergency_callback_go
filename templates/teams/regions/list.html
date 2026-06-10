@@ -1,0 +1,31 @@
+{{ define "title" }}Регионы{{ end }}
+
+{{ define "content" }}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Регионы</h1>
+    <a href="{{ urlFor "teams:region_create" }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Новый регион</a>
+</div>
+
+<div class="card p-3">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>#</th><th>Код</th><th>Название</th><th>Бригад</th><th>Статус</th><th></th></tr></thead>
+        <tbody>
+        {{ range .Regions }}
+            <tr>
+                <td>{{ .ID }}</td>
+                <td><code>{{ .Code }}</code></td>
+                <td><strong>{{ .Name }}</strong></td>
+                <td>{{ .TeamCount }} / {{ .TotalTeamCount }}</td>
+                <td>{{ if .IsActive }}<span class="badge bg-success">Активен</span>{{ else }}<span class="badge bg-secondary">Неактивен</span>{{ end }}</td>
+                <td>
+                    <a class="btn btn-sm btn-outline-primary" href="{{ urlFor "teams:region_detail" .ID }}"><i class="bi bi-eye"></i></a>
+                    <a class="btn btn-sm btn-outline-warning" href="{{ urlFor "teams:region_edit" .ID }}"><i class="bi bi-pencil"></i></a>
+                </td>
+            </tr>
+        {{ else }}
+            <tr><td colspan="6" class="text-center text-muted py-4">Нет регионов</td></tr>
+        {{ end }}
+        </tbody>
+    </table>
+</div>
+{{ end }}

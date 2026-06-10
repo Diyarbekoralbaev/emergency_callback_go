@@ -1,0 +1,40 @@
+{{ define "title" }}{{ .Region.Name }}{{ end }}
+
+{{ define "content" }}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Регион: {{ .Region.Name }}</h1>
+    <div>
+        <a class="btn btn-warning" href="{{ urlFor "teams:region_edit" .Region.ID }}"><i class="bi bi-pencil"></i> Редактировать</a>
+        <a class="btn btn-outline-danger" href="{{ urlFor "teams:region_delete" .Region.ID }}"><i class="bi bi-trash"></i> Удалить</a>
+    </div>
+</div>
+
+<div class="card p-3 mb-3">
+    <table class="table table-sm mb-0">
+        <tr><th>Название</th><td>{{ .Region.Name }}</td></tr>
+        <tr><th>Код</th><td><code>{{ .Region.Code }}</code></td></tr>
+        <tr><th>Описание</th><td>{{ .Region.Description }}</td></tr>
+        <tr><th>Активных бригад</th><td>{{ .Region.TeamCount }} / {{ .Region.TotalTeamCount }}</td></tr>
+        <tr><th>Активен</th><td>{{ if .Region.IsActive }}Да{{ else }}Нет{{ end }}</td></tr>
+        <tr><th>Создан</th><td>{{ tashkentDateTime .Region.CreatedAt }}</td></tr>
+    </table>
+</div>
+
+<div class="card p-3">
+    <h5>Бригады в регионе</h5>
+    <table class="table table-sm">
+        <thead><tr><th>Название</th><th>Активна</th><th></th></tr></thead>
+        <tbody>
+        {{ range .Teams }}
+            <tr>
+                <td>{{ .Name }}</td>
+                <td>{{ if .IsActive }}<span class="badge bg-success">Да</span>{{ else }}<span class="badge bg-secondary">Нет</span>{{ end }}</td>
+                <td><a class="btn btn-sm btn-outline-primary" href="{{ urlFor "teams:detail" .ID }}"><i class="bi bi-eye"></i></a></td>
+            </tr>
+        {{ else }}
+            <tr><td colspan="3" class="text-center text-muted py-2">Нет бригад</td></tr>
+        {{ end }}
+        </tbody>
+    </table>
+</div>
+{{ end }}

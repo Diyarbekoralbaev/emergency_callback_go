@@ -1,0 +1,73 @@
+{{ define "base" }}<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ block "title" . }}Система экстренного обратного вызова{{ end }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f5f6fa; font-family: 'Segoe UI', system-ui, sans-serif; }
+        .sidebar { position: fixed; top: 0; left: 0; width: 260px; height: 100vh; background: linear-gradient(180deg,#0d6efd 0%,#0056b3 100%); color:#fff; overflow-y:auto; z-index:1000; }
+        .sidebar-header { padding:1rem; border-bottom:1px solid rgba(255,255,255,.1); text-align:center; }
+        .sidebar-link { display:flex; align-items:center; padding:.75rem 1rem; color:rgba(255,255,255,.8); text-decoration:none; border-radius:8px; margin:.25rem .5rem; }
+        .sidebar-link:hover, .sidebar-link.active { background:rgba(255,255,255,.1); color:#fff; }
+        .sidebar-link i { width:20px; margin-right:.75rem; }
+        .main-content { margin-left:260px; min-height:100vh; padding:1.5rem; }
+        .user-menu { position:absolute; bottom:1rem; left:.5rem; right:.5rem; }
+        .user-info { padding:.75rem 1rem; background:rgba(255,255,255,.1); border-radius:8px; text-align:center; }
+        .role-badge { background:rgba(255,255,255,.2); padding:.25rem .5rem; border-radius:4px; font-size:.75rem; margin-top:.25rem; display:inline-block; }
+        .logout-btn { width:100%; margin-top:.5rem; background:rgba(220,53,69,.2); border:1px solid rgba(220,53,69,.3); color:#fff; }
+        .phone { font-family:'Courier New', monospace; font-weight:600; }
+        .card { border:none; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+        @media (max-width:768px) { .sidebar { transform:translateX(-100%); } .sidebar.show { transform:translateX(0); } .main-content { margin-left:0; padding:1rem; } .mobile-toggle { display:block !important; } }
+        .mobile-toggle { display:none; position:fixed; top:1rem; left:1rem; z-index:1001; background:#0d6efd; color:#fff; border:none; border-radius:8px; padding:.5rem; }
+    </style>
+    {{ block "extra_css" . }}{{ end }}
+</head>
+<body>
+    <button class="mobile-toggle btn" onclick="document.getElementById('sidebar').classList.toggle('show')"><i class="bi bi-list"></i></button>
+    {{ if .User.Authenticated }}
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-telephone-fill fs-4 mb-2"></i>
+            <h5>Система экстренного обратного вызова</h5>
+            <small class="opacity-75">{{ currentTashkentHM }}</small>
+        </div>
+        <div>
+            {{ if eq .User.Role "admin" }}
+            <a href="{{ urlFor "callbacks:dashboard" }}" class="sidebar-link"><i class="bi bi-speedometer2"></i><span>Панель управления</span></a>
+            {{ end }}
+            <a href="{{ urlFor "callbacks:create" }}" class="sidebar-link"><i class="bi bi-plus-circle"></i><span>Новый вызов</span></a>
+            <a href="{{ urlFor "callbacks:list" }}" class="sidebar-link"><i class="bi bi-list-ul"></i><span>Все вызовы</span></a>
+            {{ if eq .User.Role "admin" }}
+            <a href="{{ urlFor "teams:region_list" }}" class="sidebar-link"><i class="bi bi-geo-alt"></i><span>Регионы</span></a>
+            <a href="{{ urlFor "teams:list" }}" class="sidebar-link"><i class="bi bi-people"></i><span>Бригады</span></a>
+            <a href="{{ urlFor "callbacks:ratings" }}" class="sidebar-link"><i class="bi bi-star"></i><span>Оценки</span></a>
+            {{ end }}
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <i class="bi bi-person-circle fs-5"></i>
+                <div class="fw-semibold">{{ .User.Username }}</div>
+                <div class="role-badge">
+                    {{ if eq .User.Role "admin" }}<i class="bi bi-shield-check"></i> Администратор{{ else }}<i class="bi bi-headset"></i> Оператор{{ end }}
+                </div>
+                <a href="{{ urlFor "users:logout" }}" class="btn btn-sm logout-btn"><i class="bi bi-box-arrow-right"></i> Выход</a>
+            </div>
+        </div>
+    </div>
+    {{ end }}
+    <div class="main-content">
+        {{ range .Messages }}
+        <div class="alert alert-{{ .Level }} alert-dismissible fade show">
+            {{ .Text }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {{ end }}
+        {{ if .User.Authenticated }}{{ block "content" . }}{{ end }}{{ else }}{{ block "login_content" . }}{{ end }}{{ end }}
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {{ block "extra_js" . }}{{ end }}
+</body>
+</html>{{ end }}

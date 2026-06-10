@@ -1,0 +1,90 @@
+{{ define "title" }}Панель управления{{ end }}
+
+{{ define "content" }}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Панель управления</h1>
+    <a href="{{ urlFor "callbacks:export_excel" }}?{{ .QueryString }}" class="btn btn-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+</div>
+
+<form method="get" class="card mb-3 p-3">
+    <div class="row g-2">
+        <div class="col-md-3">
+            <select name="region" class="form-select">
+                <option value="">Все регионы</option>
+                {{ range .Regions }}<option value="{{ .ID }}" {{ if eq $.CurrentRegion .ID }}selected{{ end }}>{{ .Name }}</option>{{ end }}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="team" class="form-select">
+                <option value="">Все бригады</option>
+                {{ range .Teams }}<option value="{{ .ID }}" {{ if eq $.CurrentTeam .ID }}selected{{ end }}>{{ .Name }} ({{ .RegionName }})</option>{{ end }}
+            </select>
+        </div>
+        <div class="col-md-2"><input type="date" name="date_from" class="form-control" value="{{ .DateFrom }}"></div>
+        <div class="col-md-2"><input type="date" name="date_to" class="form-control" value="{{ .DateTo }}"></div>
+        <div class="col-md-2"><button class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Фильтр</button></div>
+    </div>
+    <div class="mt-2 text-muted small">{{ .PeriodDescription }}</div>
+</form>
+
+<div class="row mb-3 g-3">
+    <div class="col-md-3"><div class="card p-3"><div class="text-muted">Всего вызовов</div><div class="h3 mb-0">{{ .TotalCalls }}</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="text-muted">Успешных</div><div class="h3 mb-0 text-success">{{ .CompletedCalls }}</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="text-muted">Неудачных</div><div class="h3 mb-0 text-danger">{{ .FailedCalls }}</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="text-muted">Без оценки</div><div class="h3 mb-0 text-warning">{{ .NoRatingCalls }}</div></div></div>
+</div>
+
+<div class="row mb-3 g-3">
+    <div class="col-md-3"><div class="card p-3"><div class="text-muted">Всего оценок</div><div class="h3 mb-0">{{ .TotalRatings }}</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="text-muted">Средняя оценка</div><div class="h3 mb-0">{{ .AvgRating }} ★</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="text-muted">Успешность</div><div class="h3 mb-0 text-success">{{ .SuccessRate }}%</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="text-muted">Неудача</div><div class="h3 mb-0 text-danger">{{ .FailureRate }}%</div></div></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h5>Распределение оценок</h5>
+            <table class="table table-sm">
+                <thead><tr><th>Оценка</th><th>Кол-во</th><th>%</th></tr></thead>
+                <tbody>
+                {{ range .RatingDistribution }}
+                    <tr><td>{{ .Rating }} ★</td><td>{{ .Count }}</td><td>{{ .Percentage }}%</td></tr>
+                {{ end }}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h5>Производительность по командам/регионам</h5>
+            <table class="table table-sm">
+                <thead><tr><th>Название</th><th>Всего</th><th>Успех</th><th>Средняя ★</th></tr></thead>
+                <tbody>
+                {{ range .TeamStats }}
+                    <tr><td>{{ .Name }}</td><td>{{ .TotalCalls }}</td><td>{{ .SuccessRate }}%</td><td>{{ .AvgRating }}</td></tr>
+                {{ end }}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3 p-3">
+    <h5>Последние вызовы</h5>
+    <table class="table table-sm align-middle">
+        <thead><tr><th>Телефон</th><th>Бригада</th><th>Статус</th><th>Оценка</th><th>Время</th></tr></thead>
+        <tbody>
+        {{ range .RecentCalls }}
+            <tr>
+                <td><span class="phone">{{ .PhoneNumber }}</span></td>
+                <td>{{ .TeamName }}</td>
+                <td><span class="badge bg-{{ .StatusColor }}">{{ .StatusLabel }}</span></td>
+                <td>{{ if .HasRating }}<span class="text-{{ .RatingColor }}">{{ .RatingStars }}</span>{{ else }}—{{ end }}</td>
+                <td>{{ tashkentDateTime .CreatedAt }}</td>
+            </tr>
+        {{ end }}
+        </tbody>
+    </table>
+</div>
+{{ end }}

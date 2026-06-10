@@ -1,0 +1,36 @@
+{{ define "title" }}Вход в систему{{ end }}
+
+{{ define "login_content" }}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-telephone-fill text-primary fs-1"></i>
+                        <h4 class="mt-2">Вход в систему</h4>
+                        <small class="text-muted">Система экстренного обратного вызова</small>
+                    </div>
+                    {{ if .Error }}
+                    <div class="alert alert-danger">{{ .Error }}</div>
+                    {{ end }}
+                    <form method="post" action="{{ urlFor "users:login" }}">
+                        {{ .CSRFField }}
+                        <div class="mb-3">
+                            <label class="form-label">Имя пользователя</label>
+                            <input type="text" name="username" class="form-control" autofocus required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Пароль</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-box-arrow-in-right"></i> Войти
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}

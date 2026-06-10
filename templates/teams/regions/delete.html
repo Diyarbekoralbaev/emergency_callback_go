@@ -1,0 +1,17 @@
+{{ define "title" }}Удалить регион{{ end }}
+
+{{ define "content" }}
+<h1 class="h3 mb-4">Удалить регион</h1>
+<div class="card p-3">
+    <p>Вы уверены, что хотите удалить регион <strong>{{ .Region.Name }}</strong>?</p>
+    {{ if gt .Region.TotalTeamCount 0 }}
+    <div class="alert alert-warning">Внимание: в регионе есть {{ .Region.TotalTeamCount }} бригад. Они будут удалены вместе с регионом.</div>
+    {{ end }}
+    <p class="text-danger small">Это действие нельзя отменить.</p>
+    <form method="post">
+        {{ .CSRFField }}
+        <button type="submit" class="btn btn-danger">Удалить</button>
+        <a href="{{ urlFor "teams:region_detail" .Region.ID }}" class="btn btn-link">Отмена</a>
+    </form>
+</div>
+{{ end }}

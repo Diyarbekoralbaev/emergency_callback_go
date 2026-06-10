@@ -1,0 +1,11 @@
+.env
+*.log
+emergency-callback
+dist/
+.idea/
+.vscode/
+static/
+
+# Docs build artifacts
+site/
+.docs-venv/

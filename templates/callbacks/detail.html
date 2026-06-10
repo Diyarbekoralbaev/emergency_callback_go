@@ -1,0 +1,54 @@
+{{ define "title" }}Вызов #{{ .Callback.ID }}{{ end }}
+
+{{ define "content" }}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Вызов #{{ .Callback.ID }}</h1>
+    <a href="{{ urlFor "callbacks:list" }}" class="btn btn-link"><i class="bi bi-arrow-left"></i> Назад к списку</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h5>Информация о вызове</h5>
+            <table class="table table-sm mb-0">
+                <tr><th>Телефон</th><td><span class="phone">{{ .Callback.PhoneNumber }}</span></td></tr>
+                <tr><th>Бригада</th><td>{{ .Callback.TeamName }}</td></tr>
+                <tr><th>Регион</th><td>{{ .Callback.RegionName }}</td></tr>
+                <tr><th>Статус</th><td><span class="badge bg-{{ .Callback.StatusColor }}">{{ .Callback.StatusLabel }}</span></td></tr>
+                <tr><th>Создан</th><td>{{ tashkentDateTime .Callback.CreatedAt }}</td></tr>
+                <tr><th>Начало вызова</th><td>{{ if .Callback.CallStartedAt.IsZero }}—{{ else }}{{ tashkentDateTime .Callback.CallStartedAt }}{{ end }}</td></tr>
+                <tr><th>Конец вызова</th><td>{{ if .Callback.CallEndedAt.IsZero }}—{{ else }}{{ tashkentDateTime .Callback.CallEndedAt }}{{ end }}</td></tr>
+                <tr><th>Длительность</th><td>{{ .Callback.DurationFormatted }}</td></tr>
+                <tr><th>Создал</th><td>{{ .Callback.RequestedByUsername }}</td></tr>
+                <tr><th>Переведен</th><td>{{ if .Callback.Transferred }}Да{{ else }}Нет{{ end }}</td></tr>
+                {{ if .Callback.ErrorMessage }}<tr><th>Ошибка</th><td class="text-danger">{{ .Callback.ErrorMessage }}</td></tr>{{ end }}
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        {{ if .Callback.HasRating }}
+        <div class="card p-3 border-{{ .Callback.RatingColor }} border-2">
+            <h5>Оценка</h5>
+            <div class="display-4 text-{{ .Callback.RatingColor }}">{{ .Callback.RatingStars }}</div>
+            <div class="text-muted">{{ .Callback.RatingText }}</div>
+            <div class="small text-muted mt-2">{{ tashkentDateTime .Callback.RatingDate }}</div>
+        </div>
+        {{ else }}
+        <div class="card p-3">
+            <h5>Оценка</h5>
+            <div class="text-muted">Оценка не получена.</div>
+            {{ if .Callback.SmsSent }}
+            <div class="alert alert-info mt-2">
+                SMS со ссылкой на голосование отправлено: {{ tashkentDateTime .Callback.SmsSentAt }}
+            </div>
+            {{ end }}
+        </div>
+        {{ end }}
+        <div class="card p-3 mt-3">
+            <h5>SMS голосование</h5>
+            <div class="small text-muted">URL для голосования</div>
+            <code>{{ .Callback.VoteURL }}</code>
+        </div>
+    </div>
+</div>
+{{ end }}

@@ -1,0 +1,59 @@
+{{ define "title" }}Оценки{{ end }}
+
+{{ define "content" }}
+<h1 class="h3 mb-4">Оценки качества</h1>
+
+<form method="get" class="card mb-3 p-3">
+    <div class="row g-2">
+        <div class="col-md-3">
+            <select name="region" class="form-select">
+                <option value="">Все регионы</option>
+                {{ range .Regions }}<option value="{{ .ID }}" {{ if eq $.CurrentRegion .ID }}selected{{ end }}>{{ .Name }}</option>{{ end }}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="team" class="form-select">
+                <option value="">Все бригады</option>
+                {{ range .Teams }}<option value="{{ .ID }}" {{ if eq $.CurrentTeam .ID }}selected{{ end }}>{{ .Name }}</option>{{ end }}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="rating" class="form-select">
+                <option value="">Все оценки</option>
+                <option value="5" {{ if eq .CurrentRating "5" }}selected{{ end }}>5 ★</option>
+                <option value="4" {{ if eq .CurrentRating "4" }}selected{{ end }}>4 ★</option>
+                <option value="3" {{ if eq .CurrentRating "3" }}selected{{ end }}>3 ★</option>
+                <option value="2" {{ if eq .CurrentRating "2" }}selected{{ end }}>2 ★</option>
+                <option value="1" {{ if eq .CurrentRating "1" }}selected{{ end }}>1 ★</option>
+            </select>
+        </div>
+        <div class="col-md-2"><input type="date" name="date_from" class="form-control" value="{{ .DateFrom }}"></div>
+        <div class="col-md-2"><button class="btn btn-primary w-100">Фильтр</button></div>
+    </div>
+</form>
+
+<div class="row mb-3 g-3">
+    <div class="col-md-4"><div class="card p-3"><div class="text-muted">Всего оценок</div><div class="h3">{{ .TotalRatings }}</div></div></div>
+    <div class="col-md-4"><div class="card p-3"><div class="text-muted">Средняя</div><div class="h3">{{ .AvgRating }} ★</div></div></div>
+    <div class="col-md-4"><div class="card p-3"><div class="text-muted">Хороших (4-5★)</div><div class="h3 text-success">{{ .GoodPercentage }}%</div></div></div>
+</div>
+
+<div class="card p-3">
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Оценка</th><th>Телефон</th><th>Бригада</th><th>Регион</th><th>Время</th></tr></thead>
+        <tbody>
+        {{ range .Ratings }}
+            <tr>
+                <td><span class="text-{{ .Color }}">{{ .Stars }}</span></td>
+                <td><span class="phone">{{ .PhoneNumber }}</span></td>
+                <td>{{ .TeamName }}</td>
+                <td>{{ .RegionName }}</td>
+                <td>{{ tashkentDateTime .Timestamp }}</td>
+            </tr>
+        {{ else }}
+            <tr><td colspan="5" class="text-center text-muted py-4">Нет оценок</td></tr>
+        {{ end }}
+        </tbody>
+    </table>
+</div>
+{{ end }}

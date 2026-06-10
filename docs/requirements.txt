@@ -1,0 +1,10 @@
+# Documentation toolchain (MkDocs Material).
+# Install:  python -m venv .docs-venv && . .docs-venv/bin/activate && pip install -r docs/requirements.txt
+# Serve:    mkdocs serve
+# Build:    mkdocs build
+# PDF:      ENABLE_PDF_EXPORT=1 mkdocs build   (writes site/pdf/emergency-callback-docs.pdf)
+mkdocs==1.6.1
+mkdocs-material==9.5.39
+pymdown-extensions==10.11.2
+pygments==2.18.0
+mkdocs-with-pdf==0.9.3
