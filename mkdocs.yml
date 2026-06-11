@@ -2,6 +2,9 @@ site_name: Emergency Callback — Documentation
 site_description: Automated ambulance-service callback & rating system (Go + FreePBX/Asterisk + PostgreSQL)
 docs_dir: docs
 site_dir: site
+# Keep build-tooling files out of the published site.
+exclude_docs: |
+  requirements.txt
 
 theme:
   name: material
