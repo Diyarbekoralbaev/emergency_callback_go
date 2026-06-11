@@ -38,7 +38,15 @@ docs/                     this documentation
 ```bash
 sudo -u postgres psql -c "CREATE USER ecb WITH PASSWORD 'CHANGE_ME_STRONG';"
 sudo -u postgres psql -c "CREATE DATABASE emergency_callback OWNER ecb;"
+sudo -u postgres psql -d emergency_callback -c "GRANT ALL ON SCHEMA public TO ecb;"
 ```
+
+!!! warning "PostgreSQL 15+: права на схему `public`"
+    Начиная с PostgreSQL 15, владение базой данных **не** даёт автоматически
+    право `CREATE` на схему `public`. Без третьей команды выше миграции
+    (`migrate up` и `river migrate-up`) падают с ошибкой
+    `permission denied for schema public (SQLSTATE 42501)`. Команда `GRANT`
+    устраняет это.
 
 Строка подключения, которую вы будете использовать:
 

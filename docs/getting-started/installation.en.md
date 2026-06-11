@@ -38,7 +38,14 @@ docs/                     this documentation
 ```bash
 sudo -u postgres psql -c "CREATE USER ecb WITH PASSWORD 'CHANGE_ME_STRONG';"
 sudo -u postgres psql -c "CREATE DATABASE emergency_callback OWNER ecb;"
+sudo -u postgres psql -d emergency_callback -c "GRANT ALL ON SCHEMA public TO ecb;"
 ```
+
+!!! warning "PostgreSQL 15+: privileges on the `public` schema"
+    Since PostgreSQL 15, owning a database does **not** automatically grant
+    `CREATE` on the `public` schema. Without the third command above, migrations
+    (`migrate up` and `river migrate-up`) fail with
+    `permission denied for schema public (SQLSTATE 42501)`. The `GRANT` fixes it.
 
 The connection string you will use:
 
