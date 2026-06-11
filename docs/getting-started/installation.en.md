@@ -3,6 +3,42 @@
 This walks a **fresh server** to a running application. Telephony wiring is a
 separate step — see [FreePBX Integration](../telephony/freepbx-integration.md).
 
+## Quick automated install (recommended)
+
+The repo ships an `install.sh` that does **everything** on the app server in one
+command: installs dependencies (Go, PostgreSQL), creates the database, role and
+privileges, generates secrets, the admin password and the AMI secret, writes
+`.env`, builds the binary, runs the migrations (goose + River), creates the
+admin user, installs and starts the systemd services (web + worker), and saves
+all credentials to `INSTALL_CREDENTIALS.txt` (chmod 600).
+
+```bash
+git clone <your-repo-url> emergency_callback_go
+cd emergency_callback_go
+sudo ./install.sh          # interactive, sensible defaults
+# or fully unattended:
+sudo ./install.sh --yes
+```
+
+!!! info "FreePBX is a separate server"
+    The script does **not** touch FreePBX. It writes a `freepbx-bundle/` folder
+    (AMI user, dialplan, audio files, and a step-by-step README) that you apply
+    on your FreePBX server. See
+    [FreePBX Integration](../telephony/freepbx-integration.md).
+
+!!! warning "Secrets"
+    `install.sh` generates passwords/secrets and writes them to
+    `INSTALL_CREDENTIALS.txt` (and prints a summary at the end). Keep that file
+    safe; it, `.env`, and `freepbx-bundle/` are git-ignored.
+
+After the script finishes, open the web panel and continue with
+[FreePBX Integration](../telephony/freepbx-integration.md). The rest of this page
+documents the same steps **manually** if you prefer to run each yourself.
+
+---
+
+## Manual installation
+
 Do these in order.
 
 ## 1. Get the code and build

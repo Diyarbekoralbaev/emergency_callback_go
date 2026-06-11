@@ -10,3 +10,8 @@ static/
 # Docs build artifacts
 site/
 .docs-venv/
+
+# Installer output — contains secrets, never commit
+INSTALL_CREDENTIALS.txt
+freepbx-bundle/
+.env.bak.*
