@@ -94,7 +94,14 @@ fi
 echo
 
 # --- 3. generated files ---
-if confirm "Remove generated files (.env, binary, credentials, freepbx-bundle)?" n; then
+# --yes and --purge both remove generated files; interactive defaults to keeping them.
+remove_files=0
+if [ "$ASSUME_YES" = "1" ]; then
+  remove_files=1
+elif confirm "Remove generated files (.env, binary, credentials, freepbx-bundle)?" n; then
+  remove_files=1
+fi
+if [ "$remove_files" = "1" ]; then
   rm -f emergency-callback INSTALL_CREDENTIALS.txt .env .env.bak.*
   rm -rf freepbx-bundle
   ok "Generated files removed"
