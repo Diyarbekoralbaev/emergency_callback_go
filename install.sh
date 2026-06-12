@@ -18,6 +18,12 @@
 # a ready-to-apply bundle to ./freepbx-bundle/ (AMI user, dialplan, audio files,
 # step-by-step README) for you to apply on your FreePBX (GUI or terminal).
 #
+# IDEMPOTENT: safe to re-run any time. Existing role/database/migrations/admin
+# are detected and reused (not recreated); the app role is made owner of the DB
+# and public schema so migrations never hit permission errors; services are
+# stopped before rebuild and restarted after. If something looks wrong, just run
+# ./install.sh again — you should not need to uninstall first.
+#
 set -euo pipefail
 
 # ----------------------------------------------------------------------------
@@ -198,9 +204,15 @@ else
   psql_super -c "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\"" >/dev/null
   ok "Database ${DB_NAME} created"
 fi
+# Make the app role the owner of both the database and the public schema, plus
+# explicit grants. This guarantees migrations (goose + River) can create/drop
+# objects regardless of PG version or who created the DB earlier — and makes the
+# whole script safe to re-run with a different user/password.
+psql_super -c "ALTER DATABASE \"${DB_NAME}\" OWNER TO \"${DB_USER}\"" >/dev/null 2>&1 || true
+psql_super -c "GRANT ALL PRIVILEGES ON DATABASE \"${DB_NAME}\" TO \"${DB_USER}\"" >/dev/null 2>&1 || true
 psql_super -d "${DB_NAME}" -c "GRANT ALL ON SCHEMA public TO \"${DB_USER}\"" >/dev/null
 psql_super -d "${DB_NAME}" -c "ALTER SCHEMA public OWNER TO \"${DB_USER}\"" >/dev/null 2>&1 || true
-ok "Schema privileges granted (PG15+ safe)"
+ok "Database + schema ownership and privileges set (PG15+ safe)"
 echo
 
 # ----------------------------------------------------------------------------
@@ -250,6 +262,9 @@ echo
 # 5. Build
 # ----------------------------------------------------------------------------
 info "Building binary…"
+# Stop any running services first so we can overwrite the binary (avoids
+# "text file busy" when re-running the installer over a live deployment).
+systemctl stop emergency-callback-web emergency-callback-worker >/dev/null 2>&1 || true
 go build -o emergency-callback ./cmd/emergency-callback
 chown "$SERVICE_USER":"$SERVICE_USER" emergency-callback 2>/dev/null || true
 ok "Built ./emergency-callback"
@@ -259,9 +274,18 @@ echo
 # 6. Migrations (goose + River) — same DATABASE_URL
 # ----------------------------------------------------------------------------
 info "Running migrations…"
+# goose is idempotent (already-applied migrations are skipped).
 ./emergency-callback migrate up
-river migrate-up --database-url "${DATABASE_URL}" >/dev/null
-ok "Schema + job-queue migrations applied"
+# River migrate-up is also idempotent; tolerate the "already up to date" case so
+# re-running the installer never aborts here.
+if river migrate-up --database-url "${DATABASE_URL}" >/tmp/ecb_river.log 2>&1; then
+  ok "Schema + job-queue migrations applied"
+elif grep -qiE "already|no migrations|up.to.date|nothing to migrate|no changes" /tmp/ecb_river.log; then
+  ok "Job-queue migrations already up to date"
+else
+  cat /tmp/ecb_river.log
+  die "river migrate-up failed (see output above)"
+fi
 echo
 
 # ----------------------------------------------------------------------------
@@ -380,7 +404,9 @@ UNIT
 write_unit web web ""
 write_unit worker worker ""
 systemctl daemon-reload
-systemctl enable --now emergency-callback-web emergency-callback-worker >/dev/null 2>&1
+systemctl enable emergency-callback-web emergency-callback-worker >/dev/null 2>&1
+# restart (not just start) so re-running the installer picks up the new binary/.env
+systemctl restart emergency-callback-web emergency-callback-worker
 sleep 2
 for s in web worker; do
   if systemctl is-active --quiet "emergency-callback-$s"; then ok "service $s running"; else warn "service $s not active — check: journalctl -u emergency-callback-$s -n 50"; fi
