@@ -17,6 +17,7 @@ type Config struct {
 	SiteDomain       string
 	SessionSecret    []byte
 	CSRFKey          []byte
+	AudioDir         string
 	AMI              AMIConfig
 	Eskiz            EskizConfig
 	RiverMaxWorkers  int
@@ -52,6 +53,10 @@ func Load() (*Config, error) {
 		SiteDomain:      envStr("SITE_DOMAIN", "http://localhost:8000"),
 		SessionSecret:   padKey(mustEnv("SESSION_SECRET"), 32),
 		CSRFKey:         padKey(mustEnv("CSRF_KEY"), 32),
+		// Where the Asterisk WAV prompts live. On a co-located box this is the
+		// Asterisk sounds dir the admin audio page writes to; Asterisk plays
+		// straight from here so a replaced file takes effect on the next call.
+		AudioDir:        envStr("AUDIO_DIR", "audios"),
 		RiverMaxWorkers: envInt("RIVER_MAX_WORKERS", 5),
 		AMI: AMIConfig{
 			Host:             mustEnv("AMI_HOST"),

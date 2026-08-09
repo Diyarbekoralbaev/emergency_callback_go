@@ -29,6 +29,8 @@ func main() {
 		runWeb()
 	case "worker":
 		runWorker()
+	case "docs":
+		runDocs()
 	case "createuser":
 		runCreateUser(args)
 	case "seed":
@@ -50,6 +52,7 @@ func usage() {
 Usage:
   emergency-callback web                       Run HTTP server
   emergency-callback worker                    Run River background worker
+  emergency-callback docs                      Serve the built docs site (site/)
   emergency-callback createuser <user> <pass> [admin|operator]   Create user
   emergency-callback seed                      Seed demo regions/teams
   emergency-callback migrate <up|down|status>  Run goose migrations

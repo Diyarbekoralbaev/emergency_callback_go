@@ -1,0 +1,61 @@
+{{ define "title" }}Аудио{{ end }}
+
+{{ define "content" }}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0"><i class="bi bi-music-note-beamed"></i> Аудиосообщения</h1>
+</div>
+
+<div class="alert alert-info">
+    Это фразы, которые слышит пациент во время звонка. Загрузите новый файл (WAV, MP3 и т.п.) —
+    он будет автоматически преобразован в нужный формат (8 кГц, моно). Изменения вступают в силу
+    со <strong>следующего</strong> звонка. Файлы: <code>{{ .AudioDir }}</code>.
+</div>
+
+{{ if not .SoxOK }}
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> На сервере не установлен <code>sox</code> —
+    загрузка аудио работать не будет, пока его не установят.
+</div>
+{{ end }}
+
+<div class="row g-3">
+    {{ range .Prompts }}
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-5">
+                        <h5 class="mb-1">{{ .Title }}</h5>
+                        <p class="text-muted small mb-2">{{ .Description }}</p>
+                        <code class="small text-secondary">{{ .Key }}.wav</code>
+                        {{ if .Exists }}
+                        <div class="small text-muted mt-1">{{ .SizeKB }} КБ · обновлено {{ .Modified }}</div>
+                        {{ else }}
+                        <div class="small text-danger mt-1"><i class="bi bi-x-circle"></i> файл отсутствует</div>
+                        {{ end }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ if .Exists }}
+                        <audio controls preload="none" class="w-100" style="height:38px">
+                            <source src="/audios/{{ .Key }}/play/" type="audio/wav">
+                        </audio>
+                        {{ else }}
+                        <span class="text-muted small">нет записи</span>
+                        {{ end }}
+                    </div>
+                    <div class="col-md-4">
+                        <form method="post" action="/audios/{{ .Key }}/" enctype="multipart/form-data" class="d-flex gap-2">
+                            {{ $.CSRFField }}
+                            <input type="file" name="audio" accept="audio/*,.wav,.mp3,.ogg,.m4a" class="form-control form-control-sm" required {{ if not $.SoxOK }}disabled{{ end }}>
+                            <button type="submit" class="btn btn-sm btn-primary" {{ if not $.SoxOK }}disabled{{ end }}>
+                                <i class="bi bi-upload"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ end }}
+</div>
+{{ end }}

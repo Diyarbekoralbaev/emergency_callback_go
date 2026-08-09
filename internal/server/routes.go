@@ -48,6 +48,10 @@ func Build(s *handlers.Server) http.Handler {
 	rAdmin.GET("/ratings/", s.RatingsList)
 	rAdmin.GET("/export-excel/", s.ExcelExport)
 
+	rAdmin.GET("/audios/", s.AudioList)
+	rAdmin.GET("/audios/:key/play/", s.AudioPlay)
+	rAdmin.POST("/audios/:key/", s.AudioUpload)
+
 	rAdmin.GET("/teams/", s.TeamList)
 	rAdmin.GET("/teams/create/", s.TeamCreateGET)
 	rAdmin.POST("/teams/create/", s.TeamCreatePOST)
@@ -114,6 +118,7 @@ func registerURLs() {
 		"callbacks:get_teams_by_region": "/get-teams-by-region/",
 		"callbacks:api_callback_create": "/api/create/",
 		"callbacks:export_excel":        "/export-excel/",
+		"callbacks:audios":              "/audios/",
 		"callbacks:vote_page":           "/vote/:uuid/",
 		"callbacks:submit_vote":         "/vote/:uuid/submit/",
 		"callbacks:vote_thanks":         "/vote/:uuid/thanks/",
