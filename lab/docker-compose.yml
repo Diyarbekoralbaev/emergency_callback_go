@@ -1,0 +1,90 @@
+# Emergency Callback — sinov laboratoriyasi.
+#
+# Servislar:
+#   db        MariaDB (FreePBX uchun)
+#   pbx       FreePBX 17 + Asterisk 21 (escomputers image)
+#   callee    mini-Asterisk: 200 (bemor) va 337 (operator) extension'lari,
+#             auto-answer + skriptlanadigan DTMF (DTMF_SEQ global)
+#   app       Ubuntu 24.04 + systemd — setup wizard'ni to'liq sinash
+#   app-plain Ubuntu 24.04 systemd'siz — graceful degradation ssenariysi
+#
+# Ishga tushirish:  ./run-matrix.sh up      (birinchi marta: pbx install ~10 daqiqa)
+# Ssenariylar:      ./run-matrix.sh <N>     (run-matrix.sh ichida ro'yxat)
+#
+# Diqqat: parollar test-only, ataylab oddiy.
+
+networks:
+  labnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  pbx_var:
+  pbx_etc:
+  db_data:
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: labroot
+      MYSQL_USER: freepbxuser
+      MYSQL_PASSWORD: labfpbx
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./pbx/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./pbx/my.cnf:/etc/mysql/my.cnf:ro
+    networks:
+      labnet:
+        ipv4_address: 172.28.0.10
+
+  pbx:
+    image: escomputers/freepbx:17-nofail2ban
+    volumes:
+      - pbx_var:/var
+      - pbx_etc:/etc
+      - ../audios:/lab-audios:ro
+      - ./provision-pbx.sh:/provision-pbx.sh:ro
+    networks:
+      labnet:
+        ipv4_address: 172.28.0.20
+    ports:
+      - "127.0.0.1:8080:80"    # FreePBX GUI (debug)
+      - "127.0.0.1:8088:8088"  # ARI (host'dan doctor sinovi uchun)
+    depends_on:
+      - db
+
+  callee:
+    build: ./callee
+    networks:
+      labnet:
+        ipv4_address: 172.28.0.30
+    depends_on:
+      - pbx
+
+  app:
+    image: jrei/systemd-ubuntu:24.04
+    privileged: true
+    cgroup: host
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - ../:/repo:ro                # repo read-only — install nusxada ishlaydi
+      - ./artifacts:/artifacts      # binar shu yerdan olinadi
+    networks:
+      labnet:
+        ipv4_address: 172.28.0.40
+    tmpfs:
+      - /run
+      - /run/lock
+
+  app-plain:
+    image: ubuntu:24.04
+    command: sleep infinity
+    volumes:
+      - ../:/repo:ro
+      - ./artifacts:/artifacts
+    networks:
+      labnet:
+        ipv4_address: 172.28.0.41
