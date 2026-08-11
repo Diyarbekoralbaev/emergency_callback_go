@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/models"
+	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/pbxssh"
 	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/tz"
 	"github.com/gin-gonic/gin"
 )
@@ -99,6 +100,29 @@ func (s *Server) AudioPlay(c *gin.Context) {
 	c.File(fp)
 }
 
+// CallMedia serves a prompt WAV to Asterisk (res_http_media_cache). Public
+// but strictly whitelisted: only the six known prompt files, no traversal
+// (the :file param must match "<key>.wav" for a known key).
+func (s *Server) CallMedia(c *gin.Context) {
+	file := c.Param("file")
+	key := strings.TrimSuffix(file, ".wav")
+	if key == file { // .wav suffix required
+		c.Status(http.StatusNotFound)
+		return
+	}
+	if _, ok := audioPromptByKey(key); !ok {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	fp := filepath.Join(s.Cfg.AudioDir, key+".wav")
+	if _, err := os.Stat(fp); err != nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+	c.Header("Content-Type", "audio/wav")
+	c.File(fp)
+}
+
 // AudioUpload accepts an uploaded audio file, converts it to the exact format
 // Asterisk requires (8 kHz, mono, 16-bit signed PCM WAV) via sox, and writes it
 // into place. Asterisk re-reads the file on the next call, so no reload needed.
@@ -173,6 +197,29 @@ func (s *Server) AudioUpload(c *gin.Context) {
 	}
 
 	slog.Info("audio replaced", "key", key, "dst", dst)
+
+	// Auto-push to the PBX when it plays local sound files (PBX_SSH_* set).
+	// A failed push is a warning, not an error — the local copy is updated.
+	sshCfg := pbxssh.Config{
+		Host:     s.Cfg.PBXSSH.Host,
+		User:     s.Cfg.PBXSSH.User,
+		Password: s.Cfg.PBXSSH.Password,
+		KeyPath:  s.Cfg.PBXSSH.KeyPath,
+	}
+	if sshCfg.Configured() {
+		remote := filepath.Join(s.Cfg.PBXSSH.SoundsDir, key+".wav")
+		if err := sshCfg.PushFile(dst, remote); err != nil {
+			slog.Error("audio pbx push", "key", key, "err", err)
+			s.pushFlash(c, "warning", "Аудио «"+prompt.Title+"» обновлено локально, но НЕ скопировано на АТС: "+err.Error())
+			c.Redirect(http.StatusFound, "/audios/")
+			return
+		}
+		slog.Info("audio pushed to pbx", "key", key, "remote", remote)
+		s.pushFlash(c, "success", "Аудио «"+prompt.Title+"» обновлено и скопировано на АТС. Действует со следующего звонка.")
+		c.Redirect(http.StatusFound, "/audios/")
+		return
+	}
+
 	s.pushFlash(c, "success", "Аудио «"+prompt.Title+"» обновлено. Изменения вступят в силу со следующего звонка.")
 	c.Redirect(http.StatusFound, "/audios/")
 }

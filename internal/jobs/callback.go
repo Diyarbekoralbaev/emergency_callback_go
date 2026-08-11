@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/ami"
+	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/ari"
 	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/config"
 	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/db/sqlc"
+	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/telephony"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,10 +26,10 @@ func (ProcessCallbackArgs) Kind() string { return "process_callback_call" }
 
 type ProcessCallbackWorker struct {
 	river.WorkerDefaults[ProcessCallbackArgs]
-	Pool   *pgxpool.Pool
-	Q      *sqlc.Queries
-	AMICfg config.AMIConfig
-	River  *river.Client[pgx.Tx]
+	Pool  *pgxpool.Pool
+	Q     *sqlc.Queries
+	Cfg   *config.Config
+	River *river.Client[pgx.Tx]
 }
 
 // ratingSaverDB persists ratings using sqlc inside the AMI bridge.
@@ -56,6 +58,13 @@ func (s *ratingSaverDB) SaveRating(ctx context.Context, callbackID int64, rating
 	})
 }
 
+// Timeout: River'ning default 60s job timeout'i CallTimeout bilan poygada —
+// qo'ng'iroq tugagach DB yozuvi "context deadline exceeded" olardi. Job
+// muddati qo'ng'iroq muddatidan yetarlicha uzun bo'lishi shart.
+func (w *ProcessCallbackWorker) Timeout(*river.Job[ProcessCallbackArgs]) time.Duration {
+	return w.Cfg.AMI.CallTimeout + 60*time.Second
+}
+
 func (w *ProcessCallbackWorker) Work(ctx context.Context, job *river.Job[ProcessCallbackArgs]) error {
 	id := job.Args.CallbackID
 	slog.Info("process_callback start", "callback_id", id)
@@ -76,10 +85,15 @@ func (w *ProcessCallbackWorker) Work(ctx context.Context, job *river.Job[Process
 		slog.Error("process_callback: status->dialing failed", "id", id, "err", err)
 	}
 
-	// Run the AMI bridge.
-	bridge := ami.New(w.AMICfg, &ratingSaverDB{q: w.Q})
+	// Run the call through the configured telephony backend.
+	var caller telephony.Caller
+	if w.Cfg.TelephonyBackend == "ari" {
+		caller = ari.New(w.Cfg, &ratingSaverDB{q: w.Q})
+	} else {
+		caller = ami.New(w.Cfg.AMI, &ratingSaverDB{q: w.Q})
+	}
 	brigadeID := cb.TeamID
-	result, _ := bridge.Run(ctx, cb.PhoneNumber, &brigadeID, id)
+	result, _ := caller.Run(ctx, cb.PhoneNumber, &brigadeID, id)
 
 	// Save final state.
 	mapStatus := map[string]string{

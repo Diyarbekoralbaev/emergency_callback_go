@@ -34,6 +34,10 @@ func Build(s *handlers.Server) http.Handler {
 
 	r.POST("/api/create/", s.APICallbackCreate)
 
+	// Public, whitelisted prompt files — Asterisk's res_http_media_cache
+	// fetches these when AUDIO_MEDIA_BASE_URL is set (no session/CSRF).
+	r.GET("/call-media/:file", s.CallMedia)
+
 	// Admin + operator routes
 	rOp := r.Group("/", auth.HasRole(s.Session, auth.RoleAdmin, auth.RoleOperator))
 	rOp.GET("/callbacks/", s.CallbackList)

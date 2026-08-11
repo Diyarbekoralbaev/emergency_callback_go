@@ -65,6 +65,12 @@ func (b *Bridge) onUserEvent(ctx context.Context, msg *goami2.Message) bool {
 		if uid := msg.Field("Uniqueid"); uid != "" {
 			b.call.Uniqueid = uid
 		}
+		// Linkedid butun qo'ng'iroq zanjiri (ikkala Local oyoq + callee'ning
+		// PJSIP kanali) uchun umumiy — DTMF'ni kanal nomida raqam bo'lmagan
+		// oyoqlardan ham moslashtirish uchun saqlaymiz.
+		if lid := msg.Field("Linkedid"); lid != "" {
+			b.call.Linkedid = lid
+		}
 		slog.Info("ami call answered", "call_id", callID, "channel", b.call.Channel)
 		b.playAudio("rating_request")
 
@@ -98,12 +104,21 @@ func (b *Bridge) onDTMFEnd(ctx context.Context, msg *goami2.Message) {
 		match = true
 	case b.call.Uniqueid != "" && linkedid == b.call.Uniqueid:
 		match = true
+	case b.call.Linkedid != "" && linkedid == b.call.Linkedid:
+		// callee kanali (masalan PJSIP/200-x) nomida raqam bo'lmasa ham
+		// linkedid orqali shu qo'ng'iroqqa tegishliligi aniqlanadi
+		match = true
 	case b.call.Channel != "" && channel == b.call.Channel:
 		match = true
 	case cleanPhone != "" && contains(channel, cleanPhone):
 		match = true
 	}
 	if !match {
+		// Mos kelmagan DTMF — diagnostika uchun (boshqa parallel qo'ng'iroqning
+		// raqami bo'lishi normal, lekin yolg'iz qo'ng'iroqda bu matcher muammosi).
+		slog.Warn("ami dtmf unmatched", "digit", digit, "channel", channel,
+			"ev_uniqueid", uniqueid, "ev_linkedid", linkedid,
+			"call_uniqueid", b.call.Uniqueid, "call_linkedid", b.call.Linkedid)
 		return
 	}
 	slog.Info("ami dtmf", "digit", digit, "channel", channel, "call_id", b.call.CallID)

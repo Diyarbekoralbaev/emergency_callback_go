@@ -10,15 +10,14 @@ import (
 	"time"
 
 	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/config"
+	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/telephony"
 	"github.com/google/uuid"
 	"github.com/staskobzar/goami2"
 )
 
 // RatingSaver is satisfied by anything that can persist a rating row.
 // The River worker provides an implementation backed by sqlc.
-type RatingSaver interface {
-	SaveRating(ctx context.Context, callbackRequestID int64, rating int32, phone string) error
-}
+type RatingSaver = telephony.RatingSaver
 
 // AudioMap maps internal audio names to Asterisk extensions in the `play-audio` context.
 var AudioMap = map[string]string{
@@ -162,15 +161,5 @@ func (b *Bridge) originate() error {
 // formatPhoneNumber mirrors callbacks/ambulance_system.py:_format_phone_number —
 // strip non-digits, drop 998 country code if 12-digit local.
 func formatPhoneNumber(phone string) string {
-	clean := make([]byte, 0, len(phone))
-	for i := 0; i < len(phone); i++ {
-		if phone[i] >= '0' && phone[i] <= '9' {
-			clean = append(clean, phone[i])
-		}
-	}
-	s := string(clean)
-	if len(s) == 12 && s[:3] == "998" {
-		return s[3:]
-	}
-	return s
+	return telephony.FormatPhoneNumber(phone)
 }

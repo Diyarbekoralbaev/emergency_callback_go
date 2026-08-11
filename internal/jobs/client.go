@@ -49,10 +49,10 @@ func Setup(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, q *sqlc.
 		// Workers depend on the client (for SMS enqueue + cleanup enqueue),
 		// so register them after construction.
 		river.AddWorker(workers, &ProcessCallbackWorker{
-			Pool:   pool,
-			Q:      q,
-			AMICfg: cfg.AMI,
-			River:  rc,
+			Pool:  pool,
+			Q:     q,
+			Cfg:   cfg,
+			River: rc,
 		})
 		river.AddWorker(workers, &SendRatingSMSWorker{
 			Q:          q,

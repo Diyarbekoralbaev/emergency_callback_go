@@ -1,6 +1,10 @@
 package ami
 
-import "time"
+import (
+	"time"
+
+	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/telephony"
+)
 
 // CallState mirrors callbacks/ambulance_system.py:CallState.
 type CallState string
@@ -24,6 +28,7 @@ type Call struct {
 	BrigadeID         *int64
 	State             CallState
 	Uniqueid          string
+	Linkedid          string
 	Channel           string
 	Rating            *int32
 	Transferred       bool
@@ -42,16 +47,9 @@ type Call struct {
 	lastDigitAt time.Time
 }
 
-// CallResult is what the bridge returns once a call ends.
-type CallResult struct {
-	Success      bool
-	CallID       string
-	Error        string
-	Rating       *int32
-	Transferred  bool
-	FinalStatus  string // "completed" | "transferred" | "no_rating" | "failed"
-	CallDuration *int32
-}
+// CallResult is what the bridge returns once a call ends (shared contract
+// with the ARI backend).
+type CallResult = telephony.CallResult
 
 // FinalStatusFor returns the right final status given current call state.
 func (c *Call) buildResult() CallResult {
