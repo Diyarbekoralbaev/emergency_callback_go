@@ -14,7 +14,7 @@
 
 | ПО | Версия | Зачем |
 |----|--------|-------|
-| Go | 1.23+ | Сборка бинарника. Директива toolchain в `go.mod` при необходимости сама скачает более новую версию Go, поэтому чуть более старый Go тоже подойдёт. |
+| Go | не нужен на сервере | `install.sh` скачивает готовый бинарник со страницы GitHub Releases. Go (версия по `go.mod`) нужен только для сборки из исходников. |
 | PostgreSQL | 14+ | Данные приложения, очередь задач и сессии. |
 | `git`, `curl`, `openssl` | любые | Получение кода, генерация секретов. |
 
@@ -23,7 +23,7 @@
 ```bash
 sudo apt update
 sudo apt install -y postgresql git curl ca-certificates
-# Go (подставьте версию/архитектуру):
+# Go — ТОЛЬКО если собираете из исходников (версия по go.mod):
 curl -fsSL https://go.dev/dl/go1.23.0.linux-amd64.tar.gz -o /tmp/go.tgz
 sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tgz
 echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' | sudo tee /etc/profile.d/go.sh
@@ -46,7 +46,9 @@ go version
 
 - Создать **AMI-пользователя** для этого приложения (см.
   [Интеграцию с FreePBX](../telephony/freepbx-integration.md)).
-- Добавить небольшой **кастомный диалплан** (4 контекста).
+- Добавить небольшой **кастомный диалплан** (3 контекста, только для AMI-бэкенда) —
+  либо **ни одного** с [ARI-бэкендом](../telephony/ari-backend.md), которому нужны
+  лишь пользователь ARI и доступный порт 8088.
 - Установить **6 аудиофайлов-подсказок**.
 
 !!! info "FreePBX ещё нет?"

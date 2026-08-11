@@ -116,7 +116,7 @@ HTTP session store (managed by `scs`).
 ## River tables
 
 The job queue creates its own tables (e.g. `river_job`, `river_leader`, …) via
-`river migrate-up`. They live in their own namespace and are managed by River —
+`./emergency-callback migrate up` (River migrations are applied in-process). They live in their own namespace and are managed by River —
 do not modify them by hand.
 
 ## Migrations

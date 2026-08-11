@@ -87,6 +87,7 @@ plugins:
             Configuration: Конфигурация
             Telephony: Телефония
             FreePBX Integration: Интеграция с FreePBX
+            ARI Backend (no dialplan): ARI-бэкенд (без диалплана)
             Dialplan Reference: Справочник по диалплану
             Audio Prompts: Аудиоподсказки
             Call Flow: Поток вызова
@@ -127,6 +128,7 @@ nav:
       - Configuration: getting-started/configuration.md
   - Telephony:
       - FreePBX Integration: telephony/freepbx-integration.md
+      - ARI Backend (no dialplan): telephony/ari-backend.md
       - Dialplan Reference: telephony/dialplan-reference.md
       - Audio Prompts: telephony/audio-prompts.md
       - Call Flow: telephony/call-flow.md

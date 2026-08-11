@@ -78,7 +78,7 @@ go build -o emergency-callback ./cmd/emergency-callback
 
 # 2. Apply migrations (safe to run repeatedly)
 ./emergency-callback migrate up
-river migrate-up --database-url "$DATABASE_URL"   # only if River added migrations
+./emergency-callback migrate up   # goose + River (in-process)
 
 # 3. Swap the binary and restart
 sudo systemctl restart emergency-callback-web emergency-callback-worker

@@ -8,16 +8,26 @@ The same binary runs in two long-lived modes. **Both must run** in production:
 
 ## systemd units
 
-Place the binary and its assets in `/opt/emergency_callback`:
+!!! tip "`emergency-callback setup` does this automatically"
+    The `emergency-callback setup` wizard installs and enables both systemd
+    units for you. The unit text below is kept as a reference — for manual
+    installs or inspection.
+
+Place the binary and its configuration in `/opt/emergency_callback`:
 
 ```
 /opt/emergency_callback/
 ├── emergency-callback        # the binary
 ├── .env                      # configuration
-├── templates/                # HTML templates
-├── migrations/               # goose migrations
-└── audios/                   # source copies of the prompts
+├── templates/                # optional override: HTML templates
+├── migrations/               # optional override: goose migrations
+└── audios/                   # optional override: source copies of the prompts
 ```
+
+!!! note "`templates/`, `migrations/`, and `audios/` are embedded in the binary"
+    Copying these directories next to the binary is optional — they are embedded
+    at build time. If a directory exists on disk it takes precedence over the
+    embedded copy (handy e.g. for live template edits without a rebuild).
 
 Create a dedicated user (optional but recommended):
 
@@ -99,9 +109,9 @@ SITE_DOMAIN=https://callback.example.com
 ```
 
 !!! warning "Secure cookies behind HTTPS"
-    The session cookie's `Secure` flag is configured in code
-    (`internal/auth/session.go`). When serving over HTTPS in production, set it
-    to `true` and rebuild, so cookies are only sent over TLS.
+    When serving over HTTPS in production, set `COOKIE_SECURE=true` in `.env`
+    and restart the services — no rebuild needed. Session cookies are then only
+    sent over TLS.
 
 Example nginx server block:
 
@@ -125,7 +135,7 @@ server {
 | You changed | Do this |
 |-------------|---------|
 | `.env` | Restart `web` and/or `worker` (config is read at startup). |
-| The binary (new build) | Run `migrate up` (+ `river migrate-up` if needed), then restart both services. |
+| The binary (new build) | Run `migrate up` (it applies River's migrations too), then restart both services. |
 | Templates | Restart `web` (templates load at startup). |
 | Dialplan / Asterisk | `asterisk -rx 'dialplan reload'` or `fwconsole reload` — no app restart. |
 | Audio files | Nothing — `Playback` reads fresh per call. |

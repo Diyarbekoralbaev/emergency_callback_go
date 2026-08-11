@@ -8,14 +8,47 @@ emergency-callback <command> [args]
 
 | Command | Purpose |
 |---------|---------|
+| `setup` | **Interactive install wizard** (or `--non-interactive` with `SETUP_*`). |
+| `doctor` | Health checks (read-only): DB, migrations, AMI/ARI, Eskiz, sox, web. |
 | `web` | Run the HTTP server (UI + API). |
 | `worker` | Run the background job processor (calls, SMS, cleanup). |
 | `createuser` | Create a user. |
 | `seed` | Insert demo regions/teams. |
-| `migrate` | Run application (goose) migrations. |
+| `migrate` | App schema **and** River job-queue migrations (external `river` CLI no longer needed). |
+| `docs` | Serve the built docs site (`site/`). |
+| `version` | Binary version. |
 | `help` | Usage. |
 
-All commands read `.env` from the working directory.
+All commands read `.env` from the working directory. Templates, migrations and
+audio files are **embedded in the binary**: when missing on disk the embedded
+copy is used (a directory next to the binary takes precedence — handy when
+running from a cloned repo).
+
+---
+
+## `setup`
+
+```bash
+sudo ./emergency-callback setup                    # interactive
+sudo ./emergency-callback setup --non-interactive  # values from SETUP_<KEY>
+```
+
+Detects the environment (OS, systemd, PostgreSQL, port, sox), asks questions
+with options where reality deviates (busy port, passworded Postgres, remote
+DB, no systemd…), shows a plan, then applies it: DB provisioning, `.env` merge
+(existing values and secrets are **preserved**), migrations, admin user, audio
+(optional SSH copy to the PBX), systemd units (or `run-*.sh` without systemd),
+health check. Idempotent — safe to re-run.
+
+## `doctor`
+
+```bash
+./emergency-callback doctor
+```
+
+Read-only PASS/WARN/FAIL table: `.env`, config, DB + migrations, AMI login,
+Eskiz auth, sox, WAV files, web server response, unit states. Exit code 1 on
+any FAIL.
 
 ---
 
@@ -85,6 +118,7 @@ production.
 
 Override the migrations directory with `MIGRATIONS_DIR` if needed.
 
-!!! note "River migrations are separate"
-    `migrate` only manages the **application** schema. The job-queue tables are
-    managed by the River CLI: `river migrate-up --database-url "$DATABASE_URL"`.
+!!! note "River migrations are built in"
+    `migrate up` applies **both** migration systems: the application schema
+    (goose) and the River job-queue tables (in-process). No external `river`
+    CLI is needed. `down`/`reset` touch only the application schema.

@@ -24,6 +24,9 @@ sudo chown asterisk:asterisk /var/lib/asterisk/sounds/en/ambulance-rating-reques
 cp ambulance-rating-request.wav /opt/emergency_callback/audios/   # keep repo copy in sync
 ```
 
+Ещё проще — страница **«Аудиосообщения»** админ-панели (`/audios/`): загрузка,
+конвертация и авто-отправка на АТС без консоли.
+
 Полные подробности + конвертация форматов: [Аудиоподсказки](../telephony/audio-prompts.md).
 
 ---
@@ -95,6 +98,8 @@ worker. См. [Конфигурация](../getting-started/configuration.md).
 
 Назначение перевода находится в контексте dialplan `transfer-to-337`, а не в
 приложении. Отредактируйте его и перезагрузите Asterisk.
+(При ARI-бэкенде dialplan не используется — цель перевода задаётся переменной
+`AMI_OPERATOR_QUEUE` в `.env`.)
 
 ```ini
 [transfer-to-337]

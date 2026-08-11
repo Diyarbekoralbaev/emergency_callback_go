@@ -54,6 +54,14 @@ to the callbacks list for wrong-role).
 | GET/POST | `/teams/regions/:id/edit/` | admin | Edit region |
 | GET/POST | `/teams/regions/:id/delete/` | admin | Delete region |
 
+## Audio messages (admin)
+
+| Method | Path | Access | Purpose |
+|--------|------|--------|---------|
+| GET | `/audios/` | admin | Audio management page |
+| GET | `/audios/:key/play/` | admin | Preview (listen to) a prompt |
+| POST | `/audios/:key/` | admin | Upload + convert (sox) + auto-push to the PBX |
+
 ## Public API & voting
 
 | Method | Path | Access | Purpose |
@@ -62,6 +70,7 @@ to the callbacks list for wrong-role).
 | GET | `/vote/:uuid/` | public | SMS vote page |
 | POST | `/vote/:uuid/submit/` | public | Submit a vote (**CSRF-exempt**, JSON) |
 | GET | `/vote/:uuid/thanks/` | public | Thank-you page |
+| GET | `/call-media/:file` | public | Whitelisted prompt WAVs for Asterisk's `res_http_media_cache` (**no auth, no CSRF**) |
 
 !!! note "CSRF"
     Browser form POSTs (login, create, team/region edits) are CSRF-protected.

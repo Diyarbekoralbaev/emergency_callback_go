@@ -5,20 +5,38 @@ separate step — see [FreePBX Integration](../telephony/freepbx-integration.md)
 
 ## Quick automated install (recommended)
 
-The repo ships an `install.sh` that does **everything** on the app server in one
-command: installs dependencies (Go, PostgreSQL), creates the database, role and
-privileges, generates secrets, the admin password and the AMI secret, writes
-`.env`, builds the binary, runs the migrations (goose + River), creates the
-admin user, installs and starts the systemd services (web + worker), and saves
-all credentials to `INSTALL_CREDENTIALS.txt` (chmod 600).
+Installation is driven by the **built-in wizard** `emergency-callback setup` —
+interactive, idempotent (safe to re-run), with checks at every step and
+options for when something deviates from the norm (a busy port, an already
+installed PostgreSQL with a password, a remote database, no systemd…).
+`install.sh` is just a thin bootstrap: it downloads the prebuilt binary from
+GitHub Releases (or builds from source when Go is present) and launches the
+wizard.
 
 ```bash
 git clone <your-repo-url> emergency_callback_go
 cd emergency_callback_go
-sudo ./install.sh          # interactive, sensible defaults
-# or fully unattended:
-sudo ./install.sh --yes
+sudo ./install.sh              # binary + setup wizard
+# force downloading a release:     sudo ./install.sh --download
+# force building from source:      sudo ./install.sh --build
 ```
+
+The wizard: detects the environment → asks questions (Enter = a sensible
+default; an existing `.env` is **not clobbered**, secrets are preserved) →
+shows a plan → applies it: PostgreSQL, `.env`, migrations (goose + River,
+embedded), the admin user, audio files (over SSH to the PBX if desired),
+systemd units → verifies the web server responds. Credentials go to
+`INSTALL_CREDENTIALS.txt` (chmod 600).
+
+Verify at any time:
+
+```bash
+./emergency-callback doctor
+```
+
+For automation (CI/Ansible): `setup --non-interactive` with values in
+`SETUP_<KEY>` variables (e.g. `SETUP_DB_NAME`, `SETUP_AMI_HOST`); missing
+required values abort cleanly with a list — nothing is applied halfway.
 
 !!! info "FreePBX is a separate server"
     The script does **not** touch FreePBX. It writes a `freepbx-bundle/` folder
@@ -80,7 +98,7 @@ sudo -u postgres psql -d emergency_callback -c "GRANT ALL ON SCHEMA public TO ec
 !!! warning "PostgreSQL 15+: privileges on the `public` schema"
     Since PostgreSQL 15, owning a database does **not** automatically grant
     `CREATE` on the `public` schema. Without the third command above, migrations
-    (`migrate up` and `river migrate-up`) fail with
+    (goose and River, both inside `migrate up`) fail with
     `permission denied for schema public (SQLSTATE 42501)`. The `GRANT` fixes it.
 
 The connection string you will use:
@@ -132,13 +150,8 @@ Creates `users`, `teams_region`, `teams_team`, `callbacks_callbackrequest`,
 
 ### 4b. Job-queue (River) tables
 
-```bash
-go install github.com/riverqueue/river/cmd/river@latest
-river migrate-up --database-url "postgres://ecb:CHANGE_ME_STRONG@127.0.0.1:5432/emergency_callback?sslmode=disable"
-```
-
-River keeps its tables in their own namespace; they never collide with the app
-schema.
+As of the current version, `migrate up` applies these itself, in-process —
+the external `river` CLI is not needed. There is no separate step anymore.
 
 ## 5. Create the first admin user
 
@@ -178,7 +191,6 @@ configured. Continue with
 - [ ] PostgreSQL role + database created
 - [ ] `.env` filled in; secrets generated
 - [ ] `migrate up` succeeded
-- [ ] `river migrate-up` succeeded
 - [ ] Admin user created
 - [ ] `web` + `worker` start without errors
 - [ ] FreePBX integration done (next page)

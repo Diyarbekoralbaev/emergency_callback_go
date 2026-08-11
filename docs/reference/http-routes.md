@@ -54,6 +54,14 @@
 | GET/POST | `/teams/regions/:id/edit/` | admin | Редактирование региона |
 | GET/POST | `/teams/regions/:id/delete/` | admin | Удаление региона |
 
+## Аудиосообщения (admin)
+
+| Метод | Путь | Доступ | Назначение |
+|--------|------|--------|---------|
+| GET | `/audios/` | admin | Страница управления аудиосообщениями |
+| GET | `/audios/:key/play/` | admin | Прослушивание (предпросмотр) подсказки |
+| POST | `/audios/:key/` | admin | Загрузка + конвертация (sox) + авто-отправка на АТС |
+
 ## Публичный API и голосование
 
 | Метод | Путь | Доступ | Назначение |
@@ -62,6 +70,7 @@
 | GET | `/vote/:uuid/` | public | Страница голосования по SMS |
 | POST | `/vote/:uuid/submit/` | public | Отправка голоса (**без CSRF**, JSON) |
 | GET | `/vote/:uuid/thanks/` | public | Страница благодарности |
+| GET | `/call-media/:file` | public | WAV-подсказки из белого списка для `res_http_media_cache` Asterisk (**без входа, без CSRF**) |
 
 !!! note "CSRF"
     POST-запросы из браузерных форм (вход, создание, редактирование

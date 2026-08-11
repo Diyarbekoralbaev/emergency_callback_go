@@ -13,7 +13,7 @@ What you need before installing.
 
 | Software | Version | Why |
 |----------|---------|-----|
-| Go | 1.23+ | Build the binary. The `go.mod` toolchain directive auto-downloads a newer Go toolchain if needed, so a slightly older Go still works. |
+| Go | not needed on the server | `install.sh` downloads a prebuilt binary from GitHub Releases. Go (version per `go.mod`) is only needed to build from source. |
 | PostgreSQL | 14+ | Application data, the job queue, and sessions. |
 | `git`, `curl`, `openssl` | any | Fetch code, generate secrets. |
 
@@ -22,7 +22,7 @@ Install on Ubuntu/Debian:
 ```bash
 sudo apt update
 sudo apt install -y postgresql git curl ca-certificates
-# Go (adjust version/arch):
+# Go — ONLY if building from source (version per go.mod):
 curl -fsSL https://go.dev/dl/go1.23.0.linux-amd64.tar.gz -o /tmp/go.tgz
 sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tgz
 echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' | sudo tee /etc/profile.d/go.sh
@@ -45,7 +45,9 @@ You will:
 
 - Create an **AMI user** for this application (see
   [FreePBX Integration](../telephony/freepbx-integration.md)).
-- Add a small **custom dialplan** (4 contexts).
+- Add a small **custom dialplan** (3 contexts, AMI backend only) — or **none at
+  all** with the [ARI backend](../telephony/ari-backend.md), which only needs an
+  ARI user and a reachable port 8088.
 - Install **6 audio prompt files**.
 
 !!! info "No FreePBX yet?"

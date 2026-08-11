@@ -3,6 +3,11 @@
 Most problems are **Asterisk configuration**, not application bugs. This page
 lists every failure mode seen in practice, the cause, and the fix.
 
+!!! tip "Run `doctor` first"
+    `./emergency-callback doctor` checks the env, DB, migrations, AMI/ARI,
+    Eskiz, sox, audio files, and the web service — it often points straight at
+    the cause.
+
 ## Quick triage
 
 ```mermaid
@@ -41,6 +46,7 @@ flowchart TD
 | Symptom | Cause / Fix |
 |---------|-------------|
 | No DTMF / rating never captured | AMI user missing **`dtmf` read permission**, or endpoint `dtmf_mode` mismatch. Try `dtmf_mode=auto` (or `rfc4733`) on the endpoint. |
+| Call answers and the prompt plays, but keypresses are never registered (one-way media) | The PBX NAT settings send RTP to the external address because the app/callee network is not in Local Networks. Fix: Settings → Asterisk SIP Settings → Local Networks (add the subnet), or correct `external_media_address`. |
 | Thank-you audio cut short, premature hangup | The same keypress arrives on multiple bridge legs; old builds blocked the AMI loop on a sleep and processed the echo as a transfer choice. Current builds **de-duplicate** digits and never block the loop — make sure you run a current build. |
 | Audio doesn't play (silence) | The WAV isn't where Asterisk looks, wrong permissions, or wrong format. Confirm `core show settings` sounds dir, `chmod 644`, and WAV PCM 16-bit mono 8 kHz. See [Audio Prompts](../telephony/audio-prompts.md). |
 | Redirect fails / call drops at prompt | A dialplan context name doesn't match what the app expects (`ambulance-callback`, `play-audio`, `transfer-to-337`). Don't rename them. |

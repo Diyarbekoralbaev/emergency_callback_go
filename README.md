@@ -11,6 +11,7 @@ PostgreSQL-only, no Redis.
 | DB | pgx/v5 + sqlc + goose |
 | Job queue | riverqueue/river (Postgres-backed) |
 | Asterisk AMI | staskobzar/goami2 |
+| Telephony | AMI (goami2) or ARI (Stasis, no dialplan) |
 | Sessions | alexedwards/scs/v2 + pgxstore |
 | Templates | html/template (stdlib) |
 | CSRF | gorilla/csrf |
@@ -23,21 +24,29 @@ PostgreSQL-only, no Redis.
 cmd/emergency-callback/  entrypoint with web/worker/createuser/seed/migrate subcommands
 internal/
   ami/         goami2 client wrapping the Asterisk call state machine
+  ari/         ARI/Stasis backend (no dialplan on the PBX)
   auth/        bcrypt + scs + middleware
   config/      .env loader
   db/          pgxpool + sqlc queries
   handlers/    HTTP handlers
   jobs/        River workers (ProcessCallback, SendRatingSMS, CleanupStaleCalls)
   models/      template-friendly view structs
+  pbxssh/      audio push to the PBX over SSH
   sms/         Eskiz HTTP client
   server/      Gin router + middleware wiring
+  setup/       install wizard (setup) + health checks (doctor)
+  telephony/   backend-neutral Caller contract (AMI/ARI switch)
   templates/   html/template loader + funcs
   tz/          Asia/Tashkent helpers
 migrations/    goose .sql files (schema matches Django 1:1)
 templates/     19 HTML files (Bootstrap 5 from CDN)
+lab/           docker test lab: FreePBX 17 + callee + scenario matrix
 ```
 
 ## Setup
+
+> **Note:** `sudo ./install.sh` does all of the below automatically via the
+> built-in `setup` wizard (downloads a Release binary or builds locally).
 
 1. Postgres: create the database
    ```bash
@@ -48,20 +57,16 @@ templates/     19 HTML files (Bootstrap 5 from CDN)
    ```bash
    go build -o emergency-callback ./cmd/emergency-callback
    ```
-4. Run migrations:
+4. Run migrations (River job-queue tables are migrated in-process too — no
+   `river` CLI needed):
    ```bash
    ./emergency-callback migrate up
    ```
-5. Set up River's internal tables (only once per DB):
-   ```bash
-   go install github.com/riverqueue/river/cmd/river@latest
-   river migrate-up --database-url "$DATABASE_URL"
-   ```
-6. Create the first admin user:
+5. Create the first admin user:
    ```bash
    ./emergency-callback createuser admin admin123 admin
    ```
-7. (Optional) Seed demo data:
+6. (Optional) Seed demo data:
    ```bash
    ./emergency-callback seed
    ```
@@ -124,7 +129,11 @@ See `.env.example` for the full list. Notable:
 | `SITE_DOMAIN` | Used in the SMS vote URLs |
 | `SESSION_SECRET` | scs encryption key (32+ bytes) |
 | `CSRF_KEY` | gorilla/csrf key (32 bytes) |
+| `TELEPHONY_BACKEND` | `ami` (dialplan on the PBX) or `ari` (Stasis, no dialplan) |
 | `AMI_*` | Asterisk Manager Interface credentials + dialplan |
+| `ARI_*` | Asterisk REST Interface URL + credentials (ARI backend) |
+| `AUDIO_MEDIA_BASE_URL` | Serve voice prompts to the PBX over HTTP (ARI backend) |
+| `COOKIE_SECURE` | Set `true` behind an HTTPS proxy (TLS-only session cookie) |
 | `ESKIZ_*` | SMS provider credentials |
 | `RIVER_MAX_WORKERS` | River concurrency per queue |
 

@@ -68,14 +68,17 @@ AMI_RATING_TIMEOUT=10
   credentials → the worker cannot originate calls.
 - **`AMI_CALLER_ID`** — the caller ID number presented on the outbound call.
   Keep it a bare number/string (see the parsing warning above).
-- **`AMI_OPERATOR_QUEUE`** — operator destination hint (used by your transfer
-  dialplan; the app passes calls to the `transfer-to-337` context).
+- **`AMI_OPERATOR_QUEUE`** — operator destination. With the AMI backend the
+  transfer target lives in the dialplan (the app passes calls to the
+  `transfer-to-337` context); the ARI backend dials `AMI_OPERATOR_QUEUE` via
+  `from-internal` itself.
 - **`AMI_CALL_TIMEOUT`** — seconds the worker waits for a call to complete
   before abandoning it. The DB row then becomes `failed`/`no_rating`.
 - **`AMI_RATING_RETRY_LIMIT`** — how many invalid keypresses are tolerated
   before the call gives up asking for a rating.
-- **`AMI_RATING_TIMEOUT`** — seconds to wait for rating input (reserved for
-  tuning; the dialplan also governs wait time).
+- **`AMI_RATING_TIMEOUT`** — seconds to wait for rating input. The ARI backend
+  uses it as the silence timeout after a prompt; with the AMI backend the
+  dialplan governs the wait time.
 
 ## Eskiz SMS
 
@@ -103,6 +106,17 @@ RIVER_MAX_WORKERS=5
   in-flight call holds one AMI connection and one Asterisk channel, so size this
   against your trunk's channel capacity. See
   [Backups & Scaling](../operations/backups-scaling.md).
+
+## Other variables
+
+One line each (details in
+[Environment Variables](../reference/environment-variables.md)):
+
+- **`TELEPHONY_BACKEND`** — `ami` (default) or `ari`: which telephony backend the worker uses.
+- **`ARI_URL` / `ARI_USERNAME` / `ARI_PASSWORD`** — Asterisk REST Interface connection for the ARI backend.
+- **`COOKIE_SECURE`** — `true` behind HTTPS: session cookies are sent over TLS only.
+- **`AUDIO_DIR` / `AUDIO_MEDIA_BASE_URL`** — audio-prompt directory on the app server, and the base URL Asterisk fetches prompts from over HTTP.
+- **`PBX_SSH_*`** — SSH access to the PBX for auto-pushing audio files uploaded via the admin panel.
 
 ## Applying changes
 

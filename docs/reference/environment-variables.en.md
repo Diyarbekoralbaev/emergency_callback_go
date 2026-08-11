@@ -24,20 +24,46 @@ at startup. Explanations and effects are in
 | `SITE_DOMAIN` | yes | — | Public base URL; used to build SMS vote links. No trailing slash. |
 | `SESSION_SECRET` | yes | — | Session cookie encryption key (32+ bytes). Changing it logs everyone out. |
 | `CSRF_KEY` | yes | — | CSRF key; must be **exactly 32 bytes** (`openssl rand -base64 24`). |
+| `COOKIE_SECURE` | no | `false` | Set `true` behind an HTTPS proxy: session cookie is TLS-only. |
 
-## Asterisk AMI
+## Telephony
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `AMI_HOST` | yes | — | AMI host (often `127.0.0.1`). |
+| `TELEPHONY_BACKEND` | no | `ami` | `ami` (classic, dialplan on the PBX) or `ari` (Stasis, no dialplan needed). |
+
+## Asterisk AMI (required when `TELEPHONY_BACKEND=ami`)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AMI_HOST` | for ami | — | AMI host (often `127.0.0.1`). |
 | `AMI_PORT` | no | `5038` | AMI port. |
-| `AMI_USERNAME` | yes | — | AMI user (must exist in Asterisk). |
-| `AMI_SECRET` | yes | — | AMI secret (must match Asterisk). |
+| `AMI_USERNAME` | for ami | — | AMI user (must exist in Asterisk). |
+| `AMI_SECRET` | for ami | — | AMI secret (must match Asterisk). |
 | `AMI_CALLER_ID` | no | — | Caller ID number presented outbound. Bare number/string only. |
-| `AMI_OPERATOR_QUEUE` | no | `777` | Operator destination hint. |
-| `AMI_CALL_TIMEOUT` | no | `60` | Seconds before a call is abandoned. |
-| `AMI_RATING_RETRY_LIMIT` | no | `3` | Invalid keypresses tolerated before giving up. |
-| `AMI_RATING_TIMEOUT` | no | `10` | Seconds to wait for rating input. |
+| `AMI_OPERATOR_QUEUE` | no | `777` | Operator destination for the ARI backend (extension/queue in `from-internal`). In AMI mode the target lives in the dialplan. |
+| `AMI_CALL_TIMEOUT` | no | `60` | Seconds before a call is abandoned (shared by both backends). |
+| `AMI_RATING_RETRY_LIMIT` | no | `3` | Invalid keypresses tolerated before giving up (shared). |
+| `AMI_RATING_TIMEOUT` | no | `10` | ARI: seconds of silence after a prompt before re-prompt/finish. |
+
+## Asterisk ARI (required when `TELEPHONY_BACKEND=ari`)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ARI_URL` | for ari | — | E.g. `http://<freepbx-ip>:8088/ari`. |
+| `ARI_USERNAME` | for ari | — | ARI user (FreePBX: Settings → Asterisk REST Interface Users). |
+| `ARI_PASSWORD` | for ari | — | ARI password. |
+
+## Audio
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AUDIO_DIR` | no | `audios` | WAV prompts directory on the app server. |
+| `AUDIO_MEDIA_BASE_URL` | no | — | If set and `res_http_media_cache` is loaded on the PBX, the ARI backend plays prompts over HTTP from this base URL (usually = `SITE_DOMAIN`); no files needed on the PBX. |
+| `PBX_SSH_HOST` | no | — | PBX SSH host for auto-push of admin-uploaded audio (`sound:` mode). |
+| `PBX_SSH_USER` | no | — | SSH user. |
+| `PBX_SSH_PASSWORD` / `PBX_SSH_KEY` | no | — | Password or path to a private key. |
+| `PBX_SOUNDS_DIR` | no | `/var/lib/asterisk/sounds/en` | Asterisk sounds directory on the PBX. |
 
 ## Eskiz SMS
 

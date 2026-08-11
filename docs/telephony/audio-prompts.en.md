@@ -3,6 +3,15 @@
 The voice prompts the caller hears. Six WAV files ship in the repository's
 `audios/` directory and are installed into the Asterisk sounds directory.
 
+## Managing prompts from the admin panel
+
+Prompts can now be managed from the admin panel's **"Audio messages"** page
+(`/audios/`): upload a file in any format — `sox` converts it to 8 kHz mono
+WAV, and when the `PBX_SSH_*` variables are configured the file is pushed to
+the PBX automatically over SSH. In ARI mode with `AUDIO_MEDIA_BASE_URL` set, no
+files are needed on the PBX at all — Asterisk fetches them over HTTP. The
+manual instructions below remain as the fallback path.
+
 ## The prompts
 
 | File (name used in dialplan) | Played when | Suggested content |

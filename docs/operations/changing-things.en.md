@@ -24,6 +24,9 @@ sudo chown asterisk:asterisk /var/lib/asterisk/sounds/en/ambulance-rating-reques
 cp ambulance-rating-request.wav /opt/emergency_callback/audios/   # keep repo copy in sync
 ```
 
+Easier still — the admin panel's **"Audio messages"** page (`/audios/`):
+upload, convert, and auto-push to the PBX without touching a shell.
+
 Full details + format conversion: [Audio Prompts](../telephony/audio-prompts.md).
 
 ---
@@ -95,6 +98,8 @@ worker waits. See [Configuration](../getting-started/configuration.md).
 
 The transfer destination is in the `transfer-to-337` dialplan context, not in
 the app. Edit it and reload Asterisk.
+(With the ARI backend there is no dialplan — the transfer target is the
+`AMI_OPERATOR_QUEUE` variable in `.env`.)
 
 ```ini
 [transfer-to-337]

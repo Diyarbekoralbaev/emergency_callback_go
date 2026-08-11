@@ -8,16 +8,26 @@
 
 ## Юниты systemd
 
-Разместите бинарный файл и его ресурсы в `/opt/emergency_callback`:
+!!! tip "`emergency-callback setup` делает это автоматически"
+    Мастер `emergency-callback setup` сам устанавливает и включает оба юнита
+    systemd. Текст юнитов ниже оставлен как справочный — для ручной установки
+    или проверки.
+
+Разместите бинарный файл и его конфигурацию в `/opt/emergency_callback`:
 
 ```
 /opt/emergency_callback/
 ├── emergency-callback        # the binary
 ├── .env                      # configuration
-├── templates/                # HTML templates
-├── migrations/               # goose migrations
-└── audios/                   # source copies of the prompts
+├── templates/                # optional override: HTML templates
+├── migrations/               # optional override: goose migrations
+└── audios/                   # optional override: source copies of the prompts
 ```
+
+!!! note "`templates/`, `migrations/` и `audios/` встроены в бинарник"
+    Копировать эти каталоги рядом с бинарником не обязательно — они встраиваются
+    в него при сборке. Если каталог есть на диске, он имеет приоритет над
+    встроенной копией (удобно, например, для правки шаблонов без пересборки).
 
 Создайте выделенного пользователя (необязательно, но рекомендуется):
 
@@ -99,9 +109,9 @@ SITE_DOMAIN=https://callback.example.com
 ```
 
 !!! warning "Безопасные cookie за HTTPS"
-    Флаг `Secure` для cookie сессии настраивается в коде
-    (`internal/auth/session.go`). При обслуживании через HTTPS в продакшене установите его
-    в `true` и пересоберите, чтобы cookie отправлялись только по TLS.
+    При обслуживании через HTTPS в продакшене установите `COOKIE_SECURE=true`
+    в `.env` и перезапустите сервисы — пересборка не требуется. Тогда cookie
+    сессии отправляются только по TLS.
 
 Пример серверного блока nginx:
 
@@ -125,7 +135,7 @@ server {
 | Что вы изменили | Что делать |
 |-------------|---------|
 | `.env` | Перезапустите `web` и/или `worker` (конфигурация читается при запуске). |
-| Бинарный файл (новая сборка) | Выполните `migrate up` (+ `river migrate-up` при необходимости), затем перезапустите оба сервиса. |
+| Бинарный файл (новая сборка) | Выполните `migrate up` (он применяет и миграции River), затем перезапустите оба сервиса. |
 | Шаблоны | Перезапустите `web` (шаблоны загружаются при запуске). |
 | Dialplan / Asterisk | `asterisk -rx 'dialplan reload'` или `fwconsole reload` — без перезапуска приложения. |
 | Аудиофайлы | Ничего — `Playback` читает их заново при каждом звонке. |
