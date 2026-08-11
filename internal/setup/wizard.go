@@ -661,6 +661,39 @@ func apply(ctx context.Context, p *Prompter, st *State) error {
 	}
 	_ = os.Setenv("DATABASE_URL", st.DatabaseURL) // pastdagi qadamlar uchun
 
+	// Baza konflikti: bazada goose bilmagan app jadvallar bo'lsa (eski
+	// Django bazasi, chala o'rnatish) migratsiya baribir yiqiladi. Yechim
+	// operatorda: backup + purge (default) yoki to'xtatish.
+	if conflicts, err := AppTableConflicts(ctx, st.DatabaseURL); err == nil && len(conflicts) > 0 {
+		warnf("Bazada eski/begona jadvallar topildi: %s", strings.Join(conflicts, ", "))
+		choice := p.AskChoice("DB_CONFLICT", "Nima qilamiz?", []Choice{
+			{"purge", "Backup olib TOZALASH — bazadagi HAMMA jadval o'chadi, keyin toza o'rnatiladi"},
+			{"abort", "To'xtatish (boshqa baza nomi bilan qayta ishga tushirasiz)"},
+		})
+		if choice != "purge" {
+			return fmt.Errorf("baza konflikti: setup'ni boshqa baza nomi bilan qayta ishga tushiring, yoki purge'ni tanlang (non-interactive: SETUP_DB_CONFLICT=purge)")
+		}
+		backup := filepath.Join(st.AppDir, fmt.Sprintf("%s-purge-backup-%s.sql.gz", st.DBName, time.Now().Format("20060102-150405")))
+		info("Backup olinmoqda: %s …", backup)
+		dumpTarget := st.DBName
+		if st.PGMode == "remote" || st.PGMode == "keep" {
+			dumpTarget = st.DatabaseURL
+		}
+		if err := DumpDatabase(ctx, st.PGMode == "peer" || st.PGMode == "install", dumpTarget, backup); err != nil {
+			warnf("Backup olinmadi: %v", err)
+			if !p.AskYN("PURGE_NO_BACKUP", "BACKUPSIZ o'chirilsinmi? (ma'lumot qaytmaydi!)", false) {
+				return fmt.Errorf("purge bekor qilindi (backup yo'q)")
+			}
+			_ = os.Remove(backup)
+		} else {
+			ok("Backup tayyor: %s", backup)
+		}
+		if err := PurgeSchema(ctx, st.DatabaseURL); err != nil {
+			return fmt.Errorf("purge: %w", err)
+		}
+		ok("Baza tozalandi — toza o'rnatish davom etadi")
+	}
+
 	// Migrations (in-process)
 	info("Migratsiyalar qo'llanmoqda…")
 	if err := migrations.GooseRun(ctx, st.DatabaseURL, "up"); err != nil {

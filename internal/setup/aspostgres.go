@@ -1,8 +1,10 @@
 package setup
 
 import (
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/user"
@@ -47,4 +49,55 @@ func runPsql(ctx context.Context, args ...string) (string, error) {
 		return "", fmt.Errorf("psql: %s: %w", strings.TrimSpace(string(out)), err)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// DumpDatabase writes a gzip'ed pg_dump of the database to outPath (0600).
+// peer=true: pg_dump postgres uid bilan (lokal klaster); aks holda pg_dump
+// to'g'ridan-to'g'ri DATABASE_URL bilan chaqiriladi.
+func DumpDatabase(ctx context.Context, peer bool, dbNameOrURL, outPath string) error {
+	if _, err := exec.LookPath("pg_dump"); err != nil {
+		return fmt.Errorf("pg_dump topilmadi")
+	}
+	var cmd *exec.Cmd
+	if peer && os.Geteuid() == 0 {
+		u, err := user.Lookup("postgres")
+		if err != nil {
+			return fmt.Errorf("postgres OS user topilmadi: %w", err)
+		}
+		uid, _ := strconv.Atoi(u.Uid)
+		gid, _ := strconv.Atoi(u.Gid)
+		cmd = exec.CommandContext(ctx, "pg_dump", dbNameOrURL)
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Credential: &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid)},
+		}
+		cmd.Env = append(os.Environ(), "HOME="+u.HomeDir)
+		cmd.Dir = "/tmp"
+	} else {
+		cmd = exec.CommandContext(ctx, "pg_dump", dbNameOrURL)
+	}
+
+	f, err := os.OpenFile(outPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	gz := gzip.NewWriter(f)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	if _, err := io.Copy(gz, stdout); err != nil {
+		_ = cmd.Wait()
+		return err
+	}
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("pg_dump: %s: %w", strings.TrimSpace(stderr.String()), err)
+	}
+	return gz.Close()
 }

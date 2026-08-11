@@ -137,6 +137,83 @@ func (a *PGAdmin) EnsureDB(ctx context.Context, name, owner string, exists bool)
 	return nil
 }
 
+// appTables maps each app table to the goose migration that creates it.
+var appTables = []struct {
+	Name    string
+	Version int
+}{
+	{"users", 2},
+	{"teams_region", 3},
+	{"teams_team", 4},
+	{"callbacks_callbackrequest", 5},
+	{"callbacks_rating", 6},
+	{"sessions", 7},
+}
+
+// AppTableConflicts returns app tables that ALREADY EXIST in the target DB
+// but are NOT recorded in goose_db_version — i.e. an old/foreign schema
+// (masalan eski Django bazasi yoki chala o'rnatish) goose bilan to'qnashadi.
+func AppTableConflicts(ctx context.Context, databaseURL string) ([]string, error) {
+	conn, err := pgx.Connect(ctx, databaseURL)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close(ctx)
+
+	applied := map[int]bool{}
+	var gooseExists bool
+	if err := conn.QueryRow(ctx, "SELECT to_regclass('public.goose_db_version') IS NOT NULL").Scan(&gooseExists); err != nil {
+		return nil, err
+	}
+	if gooseExists {
+		rows, err := conn.Query(ctx, "SELECT version_id FROM goose_db_version")
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var v int64
+			if err := rows.Scan(&v); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			applied[int(v)] = true
+		}
+		rows.Close()
+	}
+
+	var conflicts []string
+	for _, t := range appTables {
+		if applied[t.Version] {
+			continue
+		}
+		var exists bool
+		if err := conn.QueryRow(ctx, "SELECT to_regclass('public.'||$1) IS NOT NULL", t.Name).Scan(&exists); err != nil {
+			return nil, err
+		}
+		if exists {
+			conflicts = append(conflicts, t.Name)
+		}
+	}
+	return conflicts, nil
+}
+
+// PurgeSchema drops EVERYTHING in the public schema and recreates it owned
+// by the connecting (app) user. Faqat backup'dan keyin chaqiriladi.
+func PurgeSchema(ctx context.Context, databaseURL string) error {
+	conn, err := pgx.Connect(ctx, databaseURL)
+	if err != nil {
+		return err
+	}
+	defer conn.Close(ctx)
+	if _, err := conn.Exec(ctx, "DROP SCHEMA public CASCADE"); err != nil {
+		return fmt.Errorf("drop schema: %w", err)
+	}
+	if _, err := conn.Exec(ctx, "CREATE SCHEMA public"); err != nil {
+		return fmt.Errorf("create schema: %w", err)
+	}
+	return nil
+}
+
 // AdminUserExists reports whether the app users table already has this user.
 // Returns false (no error) when the table doesn't exist yet.
 func AdminUserExists(ctx context.Context, databaseURL, username string) (bool, error) {
