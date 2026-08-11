@@ -393,44 +393,62 @@ func stepTelephony(ctx context.Context, p *Prompter, st *State) error {
 	// --- AMI path ---
 	amiHost := p.Ask("AMI_HOST", "FreePBX AMI host (IP)", firstNonEmpty(st.Env.Get("AMI_HOST"), ""))
 	amiPort := p.Ask("AMI_PORT", "AMI port", firstNonEmpty(st.Env.Get("AMI_PORT"), "5038"))
-	amiUser := p.Ask("AMI_USERNAME", "AMI username", firstNonEmpty(st.Env.Get("AMI_USERNAME"), "ecb"))
-	// Secret manbalari tartibi: SETUP_ override → mavjud .env → yangi yaratish
-	amiSecret := firstNonEmpty(os.Getenv("SETUP_AMI_SECRET"), st.Env.Get("AMI_SECRET"))
-	if amiSecret == "" {
-		amiSecret = genSecret()[:24]
-		st.newSecrets = append(st.newSecrets, "AMI_SECRET")
-		info("Yangi AMI secret yaratildi (FreePBX'da shu bilan user ochasiz)")
-	} else if !p.NonInteractive {
-		amiSecret = p.AskSecret("AMI_SECRET", "AMI secret", amiSecret)
-	}
 	st.Env.Set("AMI_HOST", amiHost)
 	st.Env.Set("AMI_PORT", amiPort)
-	st.Env.Set("AMI_USERNAME", amiUser)
-	st.Env.Set("AMI_SECRET", amiSecret)
 	if !st.Env.Has("AMI_CALLER_ID") {
 		st.Env.Set("AMI_CALLER_ID", p.Ask("AMI_CALLER_ID", "Caller ID raqami", "103"))
 	}
 
+	// Secret defaulti: SETUP_ override → mavjud .env → yangi generatsiya.
+	// Mavjud AMI user bilan ulanish uchun operator O'ZINIKINI kiritadi;
+	// Enter bossa yangi yaratilgani qoladi (keyin FreePBX'da shu bilan
+	// user ochiladi). Probe yiqilsa creds QAYTA so'raladi — noto'g'ri
+	// parol bilan qotib qolinmaydi.
+	defUser := firstNonEmpty(st.Env.Get("AMI_USERNAME"), "ecb")
+	defSecret := firstNonEmpty(os.Getenv("SETUP_AMI_SECRET"), st.Env.Get("AMI_SECRET"))
+	generated := ""
+	if defSecret == "" {
+		generated = genSecret()[:24]
+		defSecret = generated
+	}
+	markedNew := false
+
 	for {
-		err := ProbeAMI(ctx, amiHost, atoi(amiPort, 5038), amiUser, st.Env.Get("AMI_SECRET"))
+		amiUser := p.Ask("AMI_USERNAME", "AMI username (mavjud AMI user bo'lsa o'shani yozing)", defUser)
+		label := "AMI secret"
+		if generated != "" && defSecret == generated {
+			label = "AMI secret (Enter = yangi yaratilganini ishlatish)"
+		}
+		amiSecret := p.AskSecret("AMI_SECRET", label, defSecret)
+		st.Env.Set("AMI_USERNAME", amiUser)
+		st.Env.Set("AMI_SECRET", amiSecret)
+		if amiSecret == generated && generated != "" && !markedNew {
+			st.newSecrets = append(st.newSecrets, "AMI_SECRET")
+			markedNew = true
+			info("Yangi AMI secret ishlatiladi — FreePBX'da shu bilan user ochasiz (bundle'da tayyor)")
+		}
+
+		err := ProbeAMI(ctx, amiHost, atoi(amiPort, 5038), amiUser, amiSecret)
 		if err == nil {
 			ok("AMI login OK")
 			return nil
 		}
-		warnf("AMI probe: %v", err)
-		bundleDir, berr := WriteBundle(".", amiUser, st.Env.Get("AMI_SECRET"))
+		warnf("AMI probe: %v [user=%q, parol=%d belgi]", err, amiUser, len(amiSecret))
+		bundleDir, berr := WriteBundle(".", amiUser, amiSecret)
 		if berr == nil {
 			fmt.Printf("   FreePBX bundle tayyor: %s/ (manager_custom.conf, extensions_custom.conf, sounds/)\n", bundleDir)
-			fmt.Println("   Uni FreePBX serverida qo'llang, keyin: sudo fwconsole reload")
+			fmt.Println("   Mavjud user ishlatsangiz — yuqorida creds'ni qayta kiriting;")
+			fmt.Println("   yangi user bo'lsa — bundle'ni FreePBX'da qo'llang: sudo fwconsole reload")
 		}
 		if p.NonInteractive {
 			st.warnings = append(st.warnings, "AMI probe muvaffaqiyatsiz: "+err.Error())
 			return nil
 		}
-		if !p.Pause("FreePBX'da qo'llagach Enter bosing") {
+		if !p.Pause("Qayta urinish uchun Enter bosing") {
 			st.warnings = append(st.warnings, "AMI tekshirilmadi (skip)")
 			return nil
 		}
+		defUser, defSecret = amiUser, amiSecret
 	}
 }
 
