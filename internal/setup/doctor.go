@@ -37,13 +37,22 @@ func RunDoctor(ctx context.Context) []CheckResult {
 		results = append(results, CheckResult{name, st, detail})
 	}
 
-	// 1. .env file mode
+	// 1. .env: mavjudligi, O'QILISHI (root yozgan bo'lsa oddiy user o'qiy
+	// olmaydi — godotenv buni jimgina yutadi va "vars not set" degan
+	// adashtiruvchi xato chiqadi) va rejimi.
 	if st, err := os.Stat(".env"); err != nil {
 		add(".env", Fail, "topilmadi (CWD: shu katalogda bo'lishi kerak)")
+	} else if _, rerr := os.ReadFile(".env"); rerr != nil {
+		if os.IsPermission(rerr) {
+			add(".env", Fail, "O'QIB BO'LMAYAPTI (egasi boshqa user) — sudo bilan ishga tushiring yoki: sudo chown <servis-user> .env")
+			return results
+		}
+		add(".env", Fail, rerr.Error())
+		return results
 	} else if st.Mode().Perm()&0o077 != 0 {
 		add(".env", Warn, fmt.Sprintf("ruxsat %o — chmod 600 tavsiya etiladi", st.Mode().Perm()))
 	} else {
-		add(".env", Pass, "mavjud, 0600")
+		add(".env", Pass, "mavjud, 0600, o'qiladi")
 	}
 
 	// 2. Config completeness

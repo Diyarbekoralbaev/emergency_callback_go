@@ -13,7 +13,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -792,6 +794,14 @@ func apply(ctx context.Context, p *Prompter, st *State) error {
 
 	writeCredentials(st)
 
+	// setup root'da ishlaydi, servislar esa ServiceUser'da — yaratilgan
+	// fayllarni chown qilmasak web/worker .env'ni O'QIY OLMAYDI va
+	// restart-loop bo'ladi (production'da aniqlangan).
+	chownFor(st.ServiceUser,
+		".env", "INSTALL_CREDENTIALS.txt", "emergency-callback",
+		"run-web.sh", "run-worker.sh", "freepbx-bundle",
+		st.Env.Get("AUDIO_DIR"))
+
 	fmt.Println()
 	if len(st.warnings) == 0 && (healthy || !st.Facts.HasSystemd) {
 		fmt.Println("════════ O'rnatish tugadi ════════")
@@ -877,6 +887,33 @@ func relocateSelf(dst string) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(dst, "emergency-callback"), data, 0o755)
+}
+
+// chownFor recursively hands the given paths to username (no-op for root,
+// missing paths and lookup failures — warn only).
+func chownFor(username string, paths ...string) {
+	if username == "" || username == "root" {
+		return
+	}
+	u, err := user.Lookup(username)
+	if err != nil {
+		warnf("chown: user %q topilmadi: %v", username, err)
+		return
+	}
+	uid, _ := strconv.Atoi(u.Uid)
+	gid, _ := strconv.Atoi(u.Gid)
+	for _, p := range paths {
+		if p == "" {
+			continue
+		}
+		_ = filepath.Walk(p, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil // yo'q fayl — e'tiborsiz
+			}
+			_ = os.Chown(path, uid, gid)
+			return nil
+		})
+	}
 }
 
 func dirOwner(dir string) string {
