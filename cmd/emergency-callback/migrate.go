@@ -2,68 +2,61 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/config"
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
+	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/db"
+	"github.com/Diyarbekoralbaev/emergency_callback_go/internal/migrations"
 )
 
+// runMigrate applies both migration systems against the same database:
+//   - goose (app schema, migrations/*.sql)
+//   - River's job-queue tables, in-process — no external `river` CLI.
+//
+// `up` runs goose up then River up. `down`/`reset` only touch the goose
+// schema (River tables are shared infrastructure; never dropped as a side
+// effect). `status` prints both.
 func runMigrate(args []string) {
 	if len(args) < 1 {
 		fmt.Fprintln(os.Stderr, "usage: emergency-callback migrate <up|down|status|reset|version>")
 		os.Exit(2)
 	}
 	cmd := args[0]
+	ctx := context.Background()
 
-	cfg, err := config.Load()
+	cfg, err := config.LoadCore()
 	if err != nil {
 		slog.Error("config load", "err", err)
 		os.Exit(1)
 	}
 
-	sqlDB, err := sql.Open("pgx", cfg.DatabaseURL)
-	if err != nil {
-		slog.Error("open db", "err", err)
+	if err := migrations.GooseRun(ctx, cfg.DatabaseURL, cmd); err != nil {
+		slog.Error("migrate failed", "err", err)
 		os.Exit(1)
-	}
-	defer sqlDB.Close()
-
-	if err := sqlDB.PingContext(context.Background()); err != nil {
-		slog.Error("ping db", "err", err)
-		os.Exit(1)
-	}
-
-	if err := goose.SetDialect("postgres"); err != nil {
-		slog.Error("set dialect", "err", err)
-		os.Exit(1)
-	}
-
-	dir := "migrations"
-	if env := os.Getenv("MIGRATIONS_DIR"); env != "" {
-		dir = env
 	}
 
 	switch cmd {
-	case "up":
-		err = goose.Up(sqlDB, dir)
-	case "down":
-		err = goose.Down(sqlDB, dir)
-	case "status":
-		err = goose.Status(sqlDB, dir)
-	case "reset":
-		err = goose.Reset(sqlDB, dir)
-	case "version":
-		err = goose.Version(sqlDB, dir)
-	default:
-		fmt.Fprintf(os.Stderr, "unknown migrate cmd: %s\n", cmd)
-		os.Exit(2)
-	}
-	if err != nil {
-		slog.Error("migrate failed", "err", err)
-		os.Exit(1)
+	case "up", "status":
+		pool, err := db.NewPool(ctx, cfg)
+		if err != nil {
+			slog.Error("migrate failed", "err", err)
+			os.Exit(1)
+		}
+		defer pool.Close()
+		if cmd == "up" {
+			err = migrations.RiverUp(ctx, pool)
+		} else {
+			var applied, total int
+			applied, total, err = migrations.RiverStatus(ctx, pool)
+			if err == nil {
+				fmt.Printf("river: %d/%d migrations applied\n", applied, total)
+			}
+		}
+		if err != nil {
+			slog.Error("migrate failed", "err", err)
+			os.Exit(1)
+		}
 	}
 }

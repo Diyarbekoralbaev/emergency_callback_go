@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -28,45 +30,50 @@ type Registry struct {
 // Files whose basename starts with "vote" or whose name is "login.html" are
 // treated as standalone (no base).
 func Load(root string) (*Registry, error) {
+	return LoadFS(os.DirFS(root))
+}
+
+// LoadFS is Load over any fs.FS (a disk dir via os.DirFS, or the embedded
+// copy). The FS root must contain base.html and the page files.
+func LoadFS(fsys fs.FS) (*Registry, error) {
 	reg := &Registry{
 		layout:     map[string]*template.Template{},
 		standalone: map[string]*template.Template{},
-		baseFile:   filepath.Join(root, "base.html"),
+		baseFile:   "base.html",
 	}
-	if _, err := os.Stat(reg.baseFile); err != nil {
+	if _, err := fs.Stat(fsys, reg.baseFile); err != nil {
 		reg.baseFile = ""
 	}
 
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if info.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
-		if !strings.HasSuffix(info.Name(), ".html") {
+		if !strings.HasSuffix(d.Name(), ".html") {
 			return nil
 		}
-		rel, _ := filepath.Rel(root, path)
-		rel = filepath.ToSlash(rel)
+		rel := p // fs paths are already slash-separated and root-relative
 
 		// Skip the base file itself (already loaded with every layout page)
 		if rel == "base.html" {
 			return nil
 		}
 
-		standalone := strings.HasPrefix(filepath.Base(path), "vote")
+		standalone := strings.HasPrefix(path.Base(p), "vote")
 
-		t := template.New(filepath.Base(path)).Funcs(FuncMap())
+		t := template.New(path.Base(p)).Funcs(FuncMap())
 
 		if standalone || reg.baseFile == "" {
-			parsed, err := t.ParseFiles(path)
+			parsed, err := t.ParseFS(fsys, p)
 			if err != nil {
 				return fmt.Errorf("parse %s: %w", rel, err)
 			}
 			reg.standalone[rel] = parsed
 		} else {
-			parsed, err := t.ParseFiles(reg.baseFile, path)
+			parsed, err := t.ParseFS(fsys, reg.baseFile, p)
 			if err != nil {
 				return fmt.Errorf("parse %s: %w", rel, err)
 			}

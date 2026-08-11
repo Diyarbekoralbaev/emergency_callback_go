@@ -13,6 +13,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// version is stamped at build time via -ldflags "-X main.version=v1.2.3".
+var version = "dev"
+
 func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
 
@@ -37,6 +40,12 @@ func main() {
 		runSeed()
 	case "migrate":
 		runMigrate(args)
+	case "setup":
+		runSetup(args)
+	case "doctor":
+		runDoctor()
+	case "version", "-v", "--version":
+		fmt.Println(version)
 	case "help", "-h", "--help":
 		usage()
 	default:
@@ -55,7 +64,10 @@ Usage:
   emergency-callback docs                      Serve the built docs site (site/)
   emergency-callback createuser <user> <pass> [admin|operator]   Create user
   emergency-callback seed                      Seed demo regions/teams
-  emergency-callback migrate <up|down|status>  Run goose migrations
+  emergency-callback migrate <up|down|status>  Run schema + job-queue migrations
+  emergency-callback setup [--non-interactive] Interactive install wizard
+  emergency-callback doctor                    Health checks (read-only)
+  emergency-callback version                   Print version
 
 Env: load from .env (see .env.example)
 `)
@@ -80,10 +92,25 @@ func loadCfgAndPool(ctx context.Context) (*config.Config, *pgxpool.Pool) {
 		slog.Error("config load", "err", err)
 		os.Exit(1)
 	}
+	return cfg, mustPool(ctx, cfg)
+}
+
+// loadCorePool is loadCfgAndPool for DB-only subcommands (migrate,
+// createuser, seed) — requires DATABASE_URL but no AMI/session vars.
+func loadCorePool(ctx context.Context) (*config.Config, *pgxpool.Pool) {
+	cfg, err := config.LoadCore()
+	if err != nil {
+		slog.Error("config load", "err", err)
+		os.Exit(1)
+	}
+	return cfg, mustPool(ctx, cfg)
+}
+
+func mustPool(ctx context.Context, cfg *config.Config) *pgxpool.Pool {
 	pool, err := db.NewPool(ctx, cfg)
 	if err != nil {
 		slog.Error("db connect", "err", err)
 		os.Exit(1)
 	}
-	return cfg, pool
+	return pool
 }

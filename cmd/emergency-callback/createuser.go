@@ -27,7 +27,7 @@ func runCreateUser(args []string) {
 	}
 
 	ctx := context.Background()
-	_, pool := loadCfgAndPool(ctx)
+	_, pool := loadCorePool(ctx)
 	defer pool.Close()
 
 	q := sqlc.New(pool)
