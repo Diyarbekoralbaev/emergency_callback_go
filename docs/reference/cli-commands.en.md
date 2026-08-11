@@ -15,7 +15,7 @@ emergency-callback <command> [args]
 | `createuser` | Create a user. |
 | `seed` | Insert demo regions/teams. |
 | `migrate` | App schema **and** River job-queue migrations (external `river` CLI no longer needed). |
-| `docs` | Serve the built docs site (`site/`). |
+| `docs` | Docs site: from disk (`site/`) or the copy embedded in release binaries — no Python needed. |
 | `version` | Binary version. |
 | `help` | Usage. |
 

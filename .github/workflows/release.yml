@@ -15,9 +15,16 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build docs site (embedded into the binary)
+        run: |
+          pip install -q -r docs/requirements.txt
+          mkdocs build
       - name: Build
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -tags embeddocs \
             -ldflags "-s -w -X main.version=${GITHUB_REF_NAME}" \
             -o emergency-callback_linux_amd64 ./cmd/emergency-callback
           sha256sum emergency-callback_linux_amd64 > checksums.txt
