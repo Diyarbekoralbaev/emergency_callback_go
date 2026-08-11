@@ -3,7 +3,7 @@
 # Emergency Callback — uninstaller (app server side).
 #
 #   sudo ./uninstall.sh                 # interactive: stop/remove services, ask about the rest
-#   sudo ./uninstall.sh --yes           # remove services + generated files, but KEEP the database
+#   sudo ./uninstall.sh --yes           # stop/remove services + binary; KEEPS db, .env and credentials
 #   sudo ./uninstall.sh --drop-db       # also DROP the database + role (DESTRUCTIVE, data loss)
 #   sudo ./uninstall.sh --purge         # everything: services + files + database + role
 #
@@ -73,12 +73,30 @@ fi
 echo
 
 # --- 2. database + role (destructive) ---
-if [ -n "$DB_NAME" ]; then
+# Xavfsizlik: DATABASE_URL hosti lokal bo'lmasa, lokal klasterga TEGMAYMIZ —
+# aks holda masofaviy DB bilan bir xil NOMLI aloqasiz lokal baza o'chib ketadi.
+DB_HOST=""
+if [ -n "${DB_URL:-}" ]; then
+  DB_HOST="$(printf '%s' "$DB_URL" | sed -E 's#^[a-z]+://[^@]*@([^:/?]+).*#\1#')"
+fi
+if [ -n "$DB_NAME" ] && { [ -z "$DB_HOST" ] || [ "$DB_HOST" = "127.0.0.1" ] || [ "$DB_HOST" = "localhost" ]; }; then
   do_drop=0
   if [ "$DROP_DB" = "1" ]; then do_drop=1
   elif confirm "${RED}DROP database '$DB_NAME' and role '$DB_USER'? This DELETES ALL DATA${NC}" n; then do_drop=1; fi
   if [ "$do_drop" = "1" ]; then
     psql_super() { sudo -u postgres psql -v ON_ERROR_STOP=1 "$@"; }
+    # O'chirishdan oldin zaxira nusxa taklif qilamiz (interaktivda default: ha)
+    if confirm "pg_dump bilan zaxira olib qo'yaymi? ($DB_NAME)" y; then
+      DUMP="./${DB_NAME}-backup-$(date +%Y%m%d-%H%M%S).sql.gz"
+      if sudo -u postgres pg_dump "$DB_NAME" 2>/dev/null | gzip > "$DUMP"; then
+        chmod 600 "$DUMP"; ok "Zaxira: $DUMP"
+      else
+        rm -f "$DUMP"; warn "pg_dump ishlamadi — zaxirasiz davom"
+        confirm "Baribir o'chiraymi?" n || { warn "Bekor qilindi — baza saqlanadi"; do_drop=0; }
+      fi
+    fi
+  fi
+  if [ "$do_drop" = "1" ]; then
     info "Terminating connections to $DB_NAME…"
     psql_super -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" >/dev/null 2>&1 || true
     psql_super -c "DROP DATABASE IF EXISTS \"${DB_NAME}\";" >/dev/null && ok "Database $DB_NAME dropped"
@@ -88,26 +106,25 @@ if [ -n "$DB_NAME" ]; then
   else
     warn "Kept the database and role"
   fi
+elif [ -n "$DB_NAME" ]; then
+  warn "DATABASE_URL masofaviy hostga ($DB_HOST) ishora qiladi — lokal klasterga tegilmaydi."
+  warn "Masofaviy bazani kerak bo'lsa o'zingiz o'chirasiz."
 else
   warn "Skipping database drop (no DB detected)"
 fi
 echo
 
 # --- 3. generated files ---
-# --yes and --purge both remove generated files; interactive defaults to keeping them.
-remove_files=0
-if [ "$ASSUME_YES" = "1" ]; then
-  remove_files=1
-elif confirm "Remove generated files (.env, binary, credentials, freepbx-bundle)?" n; then
-  remove_files=1
-fi
-if [ "$remove_files" = "1" ]; then
-  rm -f emergency-callback INSTALL_CREDENTIALS.txt .env .env.bak.*
-  rm -rf freepbx-bundle
-  ok "Generated files removed"
-  warn "Source code and repo are left intact"
+# Baza SAQLANGAN bo'lsa .env va INSTALL_CREDENTIALS.txt ham saqlanadi —
+# ular bazaning yagona parol yozuvi. Ularni faqat --purge o'chiradi.
+rm -f emergency-callback run-web.sh run-worker.sh
+rm -rf freepbx-bundle
+ok "Binar va freepbx-bundle o'chirildi"
+if [ "$DROP_DB" = "1" ]; then
+  rm -f INSTALL_CREDENTIALS.txt .env .env.bak.*
+  ok "Credentials va .env o'chirildi (--purge/--drop-db)"
 else
-  warn "Kept generated files"
+  warn ".env va INSTALL_CREDENTIALS.txt SAQLANDI (baza paroli shu yerda; --purge o'chiradi)"
 fi
 echo
 

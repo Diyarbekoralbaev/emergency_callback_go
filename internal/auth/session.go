@@ -18,8 +18,10 @@ const SessionKeyRole = "role"
 // SessionKeyUsername stores the username for display purposes.
 const SessionKeyUsername = "username"
 
-// NewSessionManager builds an scs session manager backed by the Postgres `sessions` table.
-func NewSessionManager(pool *pgxpool.Pool) *scs.SessionManager {
+// NewSessionManager builds an scs session manager backed by the Postgres
+// `sessions` table. secure=true (env COOKIE_SECURE) marks the cookie
+// HTTPS-only — set it when serving behind TLS.
+func NewSessionManager(pool *pgxpool.Pool, secure bool) *scs.SessionManager {
 	sm := scs.New()
 	sm.Store = pgxstore.New(pool)
 	sm.Lifetime = 7 * 24 * time.Hour
@@ -28,6 +30,6 @@ func NewSessionManager(pool *pgxpool.Pool) *scs.SessionManager {
 	sm.Cookie.Path = "/"
 	sm.Cookie.HttpOnly = true
 	sm.Cookie.SameSite = http.SameSiteLaxMode
-	sm.Cookie.Secure = false // set true behind HTTPS
+	sm.Cookie.Secure = secure
 	return sm
 }

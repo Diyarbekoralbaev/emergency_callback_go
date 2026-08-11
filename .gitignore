@@ -15,3 +15,8 @@ site/
 INSTALL_CREDENTIALS.txt
 freepbx-bundle/
 .env.bak.*
+run-web.sh
+run-worker.sh
+
+# Lab build artifacts
+lab/artifacts/
