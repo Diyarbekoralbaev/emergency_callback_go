@@ -661,6 +661,11 @@ func apply(ctx context.Context, p *Prompter, st *State) error {
 	if err := st.Env.Save(); err != nil {
 		return fmt.Errorf(".env yozish: %w", err)
 	}
+	// chown DARHOL — servislar ishga tushishidan OLDIN. Aks holda web/worker
+	// birinchi urinishlarda root-owned .env'ni o'qiy olmay crash-loop qiladi
+	// va setup'ning health check'i yolg'ondan yiqiladi (yangi shahar
+	// serverida aniqlangan tartib xatosi).
+	chownFor(st.ServiceUser, ".env", "emergency-callback", "freepbx-bundle", st.Env.Get("AUDIO_DIR"))
 	_ = os.Setenv("DATABASE_URL", st.DatabaseURL) // pastdagi qadamlar uchun
 
 	// Baza konflikti: bazada goose bilmagan app jadvallar bo'lsa (eski
@@ -793,14 +798,9 @@ func apply(ctx context.Context, p *Prompter, st *State) error {
 	}
 
 	writeCredentials(st)
-
-	// setup root'da ishlaydi, servislar esa ServiceUser'da — yaratilgan
-	// fayllarni chown qilmasak web/worker .env'ni O'QIY OLMAYDI va
-	// restart-loop bo'ladi (production'da aniqlangan).
-	chownFor(st.ServiceUser,
-		".env", "INSTALL_CREDENTIALS.txt", "emergency-callback",
-		"run-web.sh", "run-worker.sh", "freepbx-bundle",
-		st.Env.Get("AUDIO_DIR"))
+	// .env va asosiy fayllar yuqorida (servislardan OLDIN) chown qilingan;
+	// bu yerda faqat keyin yaratilganlari.
+	chownFor(st.ServiceUser, "INSTALL_CREDENTIALS.txt", "run-web.sh", "run-worker.sh")
 
 	fmt.Println()
 	if len(st.warnings) == 0 && (healthy || !st.Facts.HasSystemd) {
