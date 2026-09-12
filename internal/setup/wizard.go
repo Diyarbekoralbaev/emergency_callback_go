@@ -354,6 +354,13 @@ func stepTelephony(ctx context.Context, p *Prompter, st *State) error {
 		{"ari", "ARI (dialplan kerak emas — FreePBX'da faqat ARI user yaratiladi)"},
 	})
 
+	// Operator extension: bemor 0/9 bosganda shu raqamga ulanadi
+	// (ARI: Local/<raqam>@from-internal; AMI: dialplan konteksti). Ikkala
+	// backend uchun ham AMI_OPERATOR_QUEUE'da saqlanadi.
+	st.Env.Set("AMI_OPERATOR_QUEUE", p.Ask("OPERATOR_QUEUE",
+		"Operator extension (bemor 0/9 bosganda ulanadi)",
+		firstNonEmpty(st.Env.Get("AMI_OPERATOR_QUEUE"), "777")))
+
 	if st.Backend == "ari" {
 		defURL := st.Env.Get("ARI_URL")
 		if defURL == "" && st.Env.Get("AMI_HOST") != "" {
