@@ -191,6 +191,17 @@ e2e() { # e2e <backend> <dtmf_seq> <expected_status>
   local rating
   rating=$($APP runuser -u postgres -- psql -d emergency_callback -tAc "SELECT rating FROM callbacks_rating WHERE callback_request_id=$id" | tr -d '[:space:]')
   echo "  rating: ${rating:-yoq}"
+  # HTTP-audio rejimida: PBX audio'ni haqiqatan OLDIMI tekshiramiz. Blind-DTMF
+  # callee ovoz eshitmasa ham DTMF yuboradi, shuning uchun status/rating yetarli
+  # emas — /call-media GET bo'lganini web logdan tasdiqlaymiz (aks holda prodda
+  # "jimlik" bug'i o'tib ketadi, xuddi Samarqandda bo'lgani kabi).
+  if [ "$backend" = ari ] && $APP grep -q "^AUDIO_MEDIA_BASE_URL=." /opt/ecb/.env 2>/dev/null; then
+    if $APP journalctl -u emergency-callback-web --since "3 min ago" --no-pager -o cat 2>/dev/null | grep -q "call-media"; then
+      pass "e2e $backend: audio HTTP orqali yetkazildi (/call-media GET)"
+    else
+      fail "e2e $backend: /call-media GET yo'q — PBX audio'ni OLMADI (jimlik!)"
+    fi
+  fi
   [ "$status" = "$want" ] && pass "e2e $backend: $status" || fail "e2e $backend: status=$status, kutilgan=$want"
 }
 

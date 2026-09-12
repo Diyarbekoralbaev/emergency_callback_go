@@ -65,7 +65,11 @@ func (r *audioResolver) Media(key string) string {
 	}
 	switch r.mode {
 	case modeHTTP:
-		return r.baseURL + "/call-media/" + name + ".wav"
+		// ARI media qiymati doim "type:id" — HTTP URL uchun ham "sound:"
+		// prefiksi SHART. Busiz Asterisk media turini tanimaydi, fetch'ga
+		// umuman urinmaydi (playback yaratiladi-yu, ovoz chalinmaydi —
+		// prodda "jimlik" simptomi shundan). Ref: Asterisk community forum.
+		return "sound:" + r.baseURL + "/call-media/" + name + ".wav"
 	case modeCustom:
 		return "sound:custom/" + name
 	default:
